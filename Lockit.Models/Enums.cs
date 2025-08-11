@@ -9,10 +9,20 @@ public class Enums
 		Maintenance = 2,
 		Damaged = 3
 	}
+
+	public enum SchoolYear
+	{
+		First = 1,
+		Second = 2,
+		Third = 3,
+		Fourth = 4,
+		Fifth = 5,
+		Sixth = 6,
+	}
 }
 
 
-// Questions, conneciont string issue, fixed by putting in both projects?
+// Questions, connection string issue, fixed by putting in both projects?
 // Question design time factory, why is it needed?
 // Question, Blazor auto vs Blazor Server
 

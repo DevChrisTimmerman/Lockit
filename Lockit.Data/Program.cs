@@ -1,4 +1,6 @@
 using Lockit.Data.Models;
+using Lockit.Data.Repositories;
+using Lockit.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lockit.Data;
@@ -15,6 +17,8 @@ public class Program
 		builder.Services.AddDbContext<LockitDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("LockitConnection")));
 		// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 		builder.Services.AddOpenApi();
+		builder.Services.AddTransient<ILockerRepository, LockerRepository>();
+		builder.Services.AddTransient<ILocationRepository, LocationRepository>();
 
 		var app = builder.Build();
 

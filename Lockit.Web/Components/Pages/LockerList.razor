@@ -1,0 +1,114 @@
+﻿@page "/lockers"
+@using System.Text
+@using Lockit.Models
+@using Lockit.Web.Services
+
+<PageTitle>Locker List</PageTitle>
+
+<h1>Locker List</h1>
+@* Dropdown to filter on location, Class, school year and locker status *@
+<div class="filter-options">
+	<label for="location">Location:</label>
+	<select id="location" @bind="selectedLocation">
+		<option value="">-------</option>
+		@foreach (var location in locations)
+		{
+			<option value="@location.Name">@location.Name</option>
+		}
+	</select>
+	<label for="class">Class:</label>
+	<label for="schoolYear">School Year:</label>
+	<select id="schoolYear" @bind="selectedSchoolYear">
+		<option value="-1">-------</option>
+		@foreach (var year in Enum.GetValues(typeof(Enums.SchoolYear)))
+		{
+			<option value="@((int)year)">@year</option>
+		}
+	</select>
+	<select disabled="disabled" id="class" @bind="selectedClass">
+		<option disabled="disabled" value="">-------</option>
+	</select>
+	<select id="lockerStatus" @bind="selectedLockerStatus">
+		<option value="">-------</option>
+		@foreach (var status in Enum.GetValues(typeof(Enums.LockerStatus)))
+		{
+			<option value="@status">@status</option>
+		}
+	</select>
+	<button class="btn btn-primary" @onclick="FilterLockers">Filter</button>
+</div>
+
+<div class="locker-list">
+	@if (lockers.Count == 0)
+	{
+		<div class="alert alert-danger">No lockers found.</div>
+	}
+	else
+	{
+		<LockerDisplayTable Items="lockers" TItem="Locker" Context="Locker">
+			<TableHeader>
+				
+				<h2>@(string.IsNullOrEmpty(filterString) ? "All lockers " : $"Lockers found for: {filterString}")</h2>
+			</TableHeader>
+			<RowTemplate>
+				<div class="display-table-links">
+					<td><h3>Locker #@Locker.Number</h3></td>
+					<td>ID: @Locker.ID</td>
+					<td>Location: @Locker.Location.Name</td>
+					<td>Status: @Locker.Status</td>
+				</div>
+				<div class="display-table-rechts">
+					@* Display student template here *@
+					<StudentDisplayTemplate StudentID="@Locker.StudentID" />
+				</div>
+			</RowTemplate>
+		</LockerDisplayTable>
+	}
+</div>
+
+
+@code {
+	[Inject]
+	public LocationService LocationService { get; set; }
+
+	[Inject]
+	public LockerService LockerService { get; set; }
+
+	private string selectedLocation = string.Empty;
+	private string selectedClass = string.Empty;
+	private int selectedSchoolYear = 0;
+	private Enums.LockerStatus? selectedLockerStatus;
+	private List<Location> locations = new List<Location>();
+
+	private string filterString = string.Empty;
+
+	private List<Locker> lockers = new List<Locker>();
+
+	protected override async Task OnInitializedAsync()
+	{
+		// Load locations, classes, school years, and locker statuses
+		locations = await LocationService.GetAllLocationsAsync();
+		lockers = await LockerService.GetAllLockersAsync();
+		// Assuming classes, schoolYears, and lockerStatuses are fetched from a service or defined statically
+	}
+
+	private void FilterLockers()
+	{
+		// Logic to filter lockers based on selected criteria
+		filterString = GetFilterString();
+	}
+
+	private string GetFilterString()
+	{
+		StringBuilder sb = new StringBuilder();
+		if (string.IsNullOrEmpty(selectedLocation) == false)
+			sb.Append($"{selectedLocation}, ");
+		if (selectedSchoolYear != -1)
+			sb.Append($"{selectedSchoolYear}, ");
+		if (string.IsNullOrEmpty(selectedClass) == false)
+			sb.Append($"{selectedClass}, ");
+		if (selectedLockerStatus != null)
+			sb.Append($"{selectedLockerStatus}");
+		return sb.ToString();
+	}
+}
