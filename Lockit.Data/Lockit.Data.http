@@ -1,0 +1,6 @@
+@Lockit.Data_HostAddress = http://localhost:5031
+
+GET {{Lockit.Data_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
