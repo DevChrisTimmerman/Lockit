@@ -9,25 +9,26 @@
 @* Dropdown to filter on location, Class, school year and locker status *@
 <div class="filter-options">
 	<label for="location">Location:</label>
-	<select id="location" @bind="selectedLocation">
-		<option value="">-------</option>
+	<select  id="location" @bind="selectedLocation">
+		<option >----Select----</option>
 		@foreach (var location in locations)
 		{
 			<option value="@location.Name">@location.Name</option>
 		}
 	</select>
-	<label for="class">Class:</label>
-	<label for="schoolYear">School Year:</label>
+	<label for="schoolYear">Year:</label>
 	<select id="schoolYear" @bind="selectedSchoolYear">
-		<option value="-1">-------</option>
+		<option >----Select----</option>
 		@foreach (var year in Enum.GetValues(typeof(Enums.SchoolYear)))
 		{
 			<option value="@((int)year)">@year</option>
 		}
 	</select>
+	<label for="class">Class:</label>
 	<select disabled="disabled" id="class" @bind="selectedClass">
 		<option disabled="disabled" value="">-------</option>
 	</select>
+	<label for="lockerStatus">Status:</label>
 	<select id="lockerStatus" @bind="selectedLockerStatus">
 		<option value="">-------</option>
 		@foreach (var status in Enum.GetValues(typeof(Enums.LockerStatus)))
@@ -35,7 +36,8 @@
 			<option value="@status">@status</option>
 		}
 	</select>
-	<button class="btn btn-primary" @onclick="FilterLockers">Filter</button>
+	<button class="btn btn-primary" @onclick="async () => await FilterLockers()">Filter</button>
+	<button class="btn btn-secondary" @onclick="async () => await ClearFilters()">Clear Filters</button>
 </div>
 
 <div class="locker-list">
@@ -52,10 +54,10 @@
 			</TableHeader>
 			<RowTemplate>
 				<div class="display-table-links">
-					<td><h3>Locker #@Locker.Number</h3></td>
-					<td>ID: @Locker.ID</td>
-					<td>Location: @Locker.Location.Name</td>
-					<td>Status: @Locker.Status</td>
+					<td class="links-info"><h3>Locker #@Locker.Number</h3></td>
+					<td class="links-info">ID: @Locker.ID</td>
+					<td class="links-info">Location: @Locker.Location.Name</td>
+					<td class="links-info">Status: @Locker.Status</td>
 				</div>
 				<div class="display-table-rechts">
 					@* Display student template here *@
@@ -92,23 +94,66 @@
 		// Assuming classes, schoolYears, and lockerStatuses are fetched from a service or defined statically
 	}
 
-	private void FilterLockers()
+	private async Task FilterLockers()
 	{
-		// Logic to filter lockers based on selected criteria
+		var filteredLockers = await LockerService.GetAllLockersAsync();
+
+		// Filter by location
+		if (!string.IsNullOrEmpty(selectedLocation))
+		{
+			filteredLockers = filteredLockers.Where(l => l.Location.Name == selectedLocation).ToList();
+		}
+
+		// // Filter by school year
+		// if (selectedSchoolYear != -1)
+		// {
+		// 	filteredLockers = filteredLockers.Where(l => l.Student != null && 
+		// 		(int)l.Student.SchoolYear == selectedSchoolYear).ToList();
+		// }
+
+		// // Filter by class
+		// if (!string.IsNullOrEmpty(selectedClass))
+		// {
+		// 	filteredLockers = filteredLockers.Where(l => l.Student != null && 
+		// 		l.Student.Class == selectedClass).ToList();
+		// }
+
+		// Filter by locker status
+		if (selectedLockerStatus.HasValue)
+		{
+			filteredLockers = filteredLockers.Where(l => l.Status == selectedLockerStatus.Value).ToList();
+		}
+
+		lockers = filteredLockers;
 		filterString = GetFilterString();
+		StateHasChanged();
+	}
+
+	private async Task ClearFilters()
+	{
+		selectedLocation = string.Empty;
+		selectedClass = string.Empty;
+		selectedSchoolYear = -1;
+		selectedLockerStatus = null;
+		lockers = await LockerService.GetAllLockersAsync();
+		filterString = string.Empty;
+		StateHasChanged();
 	}
 
 	private string GetFilterString()
 	{
 		StringBuilder sb = new StringBuilder();
 		if (string.IsNullOrEmpty(selectedLocation) == false)
-			sb.Append($"{selectedLocation}, ");
+			sb.Append($"{selectedLocation} ");
 		if (selectedSchoolYear != -1)
-			sb.Append($"{selectedSchoolYear}, ");
+			sb.Append($"{selectedSchoolYear} ");
 		if (string.IsNullOrEmpty(selectedClass) == false)
-			sb.Append($"{selectedClass}, ");
+			sb.Append($"{selectedClass} ");
 		if (selectedLockerStatus != null)
 			sb.Append($"{selectedLockerStatus}");
+		
 		return sb.ToString();
 	}
+
+	//https://wireframe.cc/LonUUW
 }

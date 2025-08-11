@@ -58,17 +58,3 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
-
-.display-table-links {
-    display: flex;
-	float: left;
-	margin-right: 20px;
-    flex-direction: row;
-    justify-content: space-between;
-}
-
-.display-table-rechts {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-}

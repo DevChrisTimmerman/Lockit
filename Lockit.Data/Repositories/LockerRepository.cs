@@ -15,17 +15,17 @@ public class LockerRepository : ILockerRepository
 
 	public async Task<List<Locker>> GetAllLockersAsync()
 	{
-		return await _context.Lockers.ToListAsync();
+		return await _context.Lockers.Include(l => l.Location).Include(l => l.Student).ToListAsync();
 	}
 
 	public async Task<Locker?> GetLockerByIdAsync(int lockerId)
 	{
-		return await _context.Lockers.FirstOrDefaultAsync(l => l.ID == lockerId);
+		return await _context.Lockers.Include(l => l.Location).Include(l => l.Student).FirstOrDefaultAsync(l => l.ID == lockerId);
 	}
 
 	public async Task<Locker?> GetLockerByUserIdAsync(int userId)
 	{
-		return await _context.Lockers.FirstOrDefaultAsync(l => l.StudentID == userId);
+		return await _context.Lockers.Include(l => l.Location).Include(l => l.Student).FirstOrDefaultAsync(l => l.StudentID == userId);
 	}
 
 	public async Task<Locker> AddLockerAsync(Locker locker)
