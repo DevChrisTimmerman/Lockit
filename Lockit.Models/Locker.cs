@@ -16,4 +16,10 @@ public class Locker
 	public Location Location { get; set; }
 	[ForeignKey("StudentID")]
 	public Student Student { get; set; }
+
+	public Locker()
+	{
+		Location = new Location();
+		Student = new Student();
+	}
 }
