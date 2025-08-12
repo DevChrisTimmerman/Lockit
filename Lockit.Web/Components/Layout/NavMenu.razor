@@ -1,30 +1,14 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-	<div class="container-fluid">
-		<a class="navbar-brand" href="">Lockit</a>
-	</div>
-</div>
-
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-	<nav class="nav flex-column">
-		<div class="nav-item px-3">
-			<NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-				<span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-			</NavLink>
-		</div>
-
-		<div class="nav-item px-3">
-			<NavLink class="nav-link" href="lockers">
-				<span class="bi bi-boxes-fill-nav-menu" aria-hidden="true"></span> Lockers
-			</NavLink>
-		</div>
-
-		<div class="nav-item px-3">
-			<NavLink class="nav-link" href="counter">
-				<span class="bi bi-map-fill-nav-menu" aria-hidden="true"></span> Map
-			</NavLink>
-		</div>
-	</nav>
-</div>
-
+﻿<MudNavMenu>
+	<MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+		Home
+	</MudNavLink>
+	<MudNavLink Href="lockers" Icon="@Icons.Material.Filled.Storage">
+		Lockers
+	</MudNavLink>
+	<MudNavLink Href="counter" Icon="@Icons.Material.Filled.Map">
+		Map
+	</MudNavLink>
+	<MudNavLink Href="counter" Icon="@Icons.Material.Filled.PlaylistAddCircle">
+		Registration form
+	</MudNavLink>
+</MudNavMenu>

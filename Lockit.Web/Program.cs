@@ -1,6 +1,7 @@
 using Azure.Core;
 using Lockit.Web.Components;
 using Lockit.Web.Services;
+using MudBlazor.Services;
 
 namespace Lockit.Web
 {
@@ -10,6 +11,7 @@ namespace Lockit.Web
 		{
 			var builder = WebApplication.CreateBuilder(args);
 
+			builder.Services.AddMudServices();
 			builder.Services.AddTransient<LockerService>();
 			builder.Services.AddTransient<LocationService>();
 			builder.Services.AddSingleton(new HttpClient { BaseAddress = new Uri("http://localhost:5031/") });

@@ -1,159 +1,93 @@
 ﻿@page "/lockers"
-@using System.Text
 @using Lockit.Models
 @using Lockit.Web.Services
 
 <PageTitle>Locker List</PageTitle>
 
-<h1>Locker List</h1>
-@* Dropdown to filter on location, Class, school year and locker status *@
-<div class="filter-options">
-	<label for="location">Location:</label>
-	<select  id="location" @bind="selectedLocation">
-		<option >----Select----</option>
-		@foreach (var location in locations)
-		{
-			<option value="@location.Name">@location.Name</option>
-		}
-	</select>
-	<label for="schoolYear">Year:</label>
-	<select id="schoolYear" @bind="selectedSchoolYear">
-		<option >----Select----</option>
-		@foreach (var year in Enum.GetValues(typeof(Enums.SchoolYear)))
-		{
-			<option value="@((int)year)">@year</option>
-		}
-	</select>
-	<label for="class">Class:</label>
-	<select disabled="disabled" id="class" @bind="selectedClass">
-		<option disabled="disabled" value="">-------</option>
-	</select>
-	<label for="lockerStatus">Status:</label>
-	<select id="lockerStatus" @bind="selectedLockerStatus">
-		<option value="">-------</option>
-		@foreach (var status in Enum.GetValues(typeof(Enums.LockerStatus)))
-		{
-			<option value="@status">@status</option>
-		}
-	</select>
-	<button class="btn btn-primary" @onclick="async () => await FilterLockers()">Filter</button>
-	<button class="btn btn-secondary" @onclick="async () => await ClearFilters()">Clear Filters</button>
-</div>
+<MudPaper Class="pa-2 ma-5" Elevation="3">
+	<MudTable T="Locker" Items="@lockers" Hover="true" Filter="new Func<Locker, bool>(SearchFunc)" FixedHeader="true" Height="calc(80vh - var(--mud-appbar-height) - 10px)" Virtualize="true">
+		<ToolBarContent>
+			<MudText Typo="Typo.h6">All Lockers</MudText>
+			<MudSpacer />
+			<MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"/>
+		</ToolBarContent>
+		<HeaderContent>
+			<MudTh>Locker #</MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Student.Name)">Name</MudTableSortLabel></MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Student.LastName)">Lastname</MudTableSortLabel></MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Student.Class)">Class</MudTableSortLabel></MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Location)">Location</MudTableSortLabel></MudTh>
+			<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Status)">Status</MudTableSortLabel></MudTh>
+			<MudTh><MudIcon Icon="@Icons.Material.Filled.DashboardCustomize" /></MudTh>
+		</HeaderContent>
+		<RowTemplate>
+			<MudTd>@context.Number</MudTd>
+			<MudTd>@context.Student.Name</MudTd>
+			<MudTd>@context.Student.LastName</MudTd>
+			<MudTd>@context.Student.Class</MudTd>
+			<MudTd>@context.Location.Name</MudTd>
+			<MudTd>
+				<MudChip T="string" Color=@GetStatusChipColor(context.Status)> @context.Status </MudChip>
+			</MudTd>
+			<MudTd>
+				<MudIconButton Icon="@Icons.Material.Filled.PersonAddAlt1"/> 
+				<MudIconButton Icon="@Icons.Material.Filled.PersonOff"/> 
+				<MudSpacer/>
+				<MudIconButton Icon="@Icons.Material.Filled.Close"/> 
+			</MudTd>
+		</RowTemplate>
+		<PagerContent>
+			<MudTablePager PageSizeOptions="new[] { 10, 25, 100, int.MaxValue }"
+			               RowsPerPageString="Rows per page"
+			               AllItemsText="All"
+			               InfoFormat="{first_item}-{last_item} // {all_items}"/>
+		</PagerContent>
+	</MudTable>
 
-<div class="locker-list">
-	@if (lockers.Count == 0)
-	{
-		<div class="alert alert-danger">No lockers found.</div>
-	}
-	else
-	{
-		<LockerDisplayTable Items="lockers" TItem="Locker" Context="Locker">
-			<TableHeader>
-				
-				<h2>@(string.IsNullOrEmpty(filterString) ? "All lockers " : $"Lockers found for: {filterString}")</h2>
-			</TableHeader>
-			<RowTemplate>
-				<div class="display-table-links">
-					<td class="links-info"><h3>Locker #@Locker.Number</h3></td>
-					<td class="links-info">ID: @Locker.ID</td>
-					<td class="links-info">Location: @Locker.Location.Name</td>
-					<td class="links-info">Status: @Locker.Status</td>
-				</div>
-				<div class="display-table-rechts">
-					@* Display student template here *@
-					<StudentDisplayTemplate StudentID="@Locker.StudentID" />
-				</div>
-			</RowTemplate>
-		</LockerDisplayTable>
-	}
-</div>
+</MudPaper>
 
-
-@code {
+@code
+{
 	[Inject]
 	public LocationService LocationService { get; set; }
-
 	[Inject]
 	public LockerService LockerService { get; set; }
 
-	private string selectedLocation = string.Empty;
-	private string selectedClass = string.Empty;
-	private int selectedSchoolYear = 0;
-	private Enums.LockerStatus? selectedLockerStatus;
-	private List<Location> locations = new List<Location>();
+	private List<Locker> lockers = new();
 
-	private string filterString = string.Empty;
+	private string searchString = string.Empty;
 
-	private List<Locker> lockers = new List<Locker>();
+	private Color chipColor;
 
 	protected override async Task OnInitializedAsync()
 	{
-		// Load locations, classes, school years, and locker statuses
-		locations = await LocationService.GetAllLocationsAsync();
 		lockers = await LockerService.GetAllLockersAsync();
-		// Assuming classes, schoolYears, and lockerStatuses are fetched from a service or defined statically
 	}
 
-	private async Task FilterLockers()
+	private bool SearchFunc(Locker locker)
 	{
-		var filteredLockers = await LockerService.GetAllLockersAsync();
+		if (string.IsNullOrWhiteSpace(searchString))
+			return true;
+		return locker.Student.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+			   locker.Student.LastName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+			   locker.Student.Class.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+			   locker.Location.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+			   
+	}
 
-		// Filter by location
-		if (!string.IsNullOrEmpty(selectedLocation))
+	private Color GetStatusChipColor(Enums.LockerStatus status)
+	{
+		@switch (status)
 		{
-			filteredLockers = filteredLockers.Where(l => l.Location.Name == selectedLocation).ToList();
+			case Enums.LockerStatus.Occupied:
+				return Color.Info;
+			case Enums.LockerStatus.Available:
+				return Color.Success;
+			case Enums.LockerStatus.Maintenance:
+				return Color.Error;
+			default:
+				return Color.Default;
 		}
-
-		// // Filter by school year
-		// if (selectedSchoolYear != -1)
-		// {
-		// 	filteredLockers = filteredLockers.Where(l => l.Student != null && 
-		// 		(int)l.Student.SchoolYear == selectedSchoolYear).ToList();
-		// }
-
-		// // Filter by class
-		// if (!string.IsNullOrEmpty(selectedClass))
-		// {
-		// 	filteredLockers = filteredLockers.Where(l => l.Student != null && 
-		// 		l.Student.Class == selectedClass).ToList();
-		// }
-
-		// Filter by locker status
-		if (selectedLockerStatus.HasValue)
-		{
-			filteredLockers = filteredLockers.Where(l => l.Status == selectedLockerStatus.Value).ToList();
-		}
-
-		lockers = filteredLockers;
-		filterString = GetFilterString();
-		StateHasChanged();
 	}
 
-	private async Task ClearFilters()
-	{
-		selectedLocation = string.Empty;
-		selectedClass = string.Empty;
-		selectedSchoolYear = -1;
-		selectedLockerStatus = null;
-		lockers = await LockerService.GetAllLockersAsync();
-		filterString = string.Empty;
-		StateHasChanged();
-	}
-
-	private string GetFilterString()
-	{
-		StringBuilder sb = new StringBuilder();
-		if (string.IsNullOrEmpty(selectedLocation) == false)
-			sb.Append($"{selectedLocation} ");
-		if (selectedSchoolYear != -1)
-			sb.Append($"{selectedSchoolYear} ");
-		if (string.IsNullOrEmpty(selectedClass) == false)
-			sb.Append($"{selectedClass} ");
-		if (selectedLockerStatus != null)
-			sb.Append($"{selectedLockerStatus}");
-		
-		return sb.ToString();
-	}
-
-	//https://wireframe.cc/LonUUW
 }
