@@ -2,26 +2,24 @@
 @using Lockit.Models
 @using Lockit.Web.Services
 
-<MudPaper Class="pa-2 ma-5" Elevation="3">
-	@if (registrationDone == false)
-	{
-		<EditForm Model="@locker" OnValidSubmit="OnValidSubmit">
-			<DataAnnotationsValidator />
-			<MudGrid>
-				<MudItem>
-					<MudTextField Label="Name" @bind-Value="@locker.Student.Name"></MudTextField>
-					<MudTextField Label="Lastname" @bind-Value="@locker.Student.LastName"></MudTextField>
-					<MudTextField Label="Class" @bind-Value="@locker.Student.Class"></MudTextField>
-					<MudButton ButtonType="ButtonType.Submit">Register</MudButton>
-				</MudItem>
-			</MudGrid>
-		</EditForm>
-	}
-	else
-	{
-		<MudAlert Severity="Severity.Success">Registration successful!</MudAlert>
-	}
-</MudPaper>
+@if (registrationDone == false)
+{
+	<EditForm Model="@locker" OnValidSubmit="OnValidSubmit">
+		<DataAnnotationsValidator />
+		<MudGrid>
+			<MudItem Class="ma-5">
+				<MudTextField Label="Name" @bind-Value="@locker.Student.Name"></MudTextField>
+				<MudTextField Label="Lastname" @bind-Value="@locker.Student.LastName"></MudTextField>
+				<MudTextField Label="Class" @bind-Value="@locker.Student.Class"></MudTextField>
+				<MudButton ButtonType="ButtonType.Submit">Register</MudButton>
+			</MudItem>
+		</MudGrid>
+	</EditForm>
+}
+else
+{
+	<MudAlert Severity="Severity.Success">Registration successful!</MudAlert>
+}
 
 @inject LockerService LockerService
 @code {

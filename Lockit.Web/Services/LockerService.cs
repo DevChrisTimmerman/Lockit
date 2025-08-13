@@ -1,14 +1,21 @@
-﻿using System.Net;
-using Lockit.Models;
+﻿using Lockit.Models;
+using System;
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Http.Json;
 
 namespace Lockit.Web.Services;
 
 public class LockerService
 {
+	private readonly JsonSerializerOptions _jsonSerializerOptions = new ();
 	private readonly HttpClient _httpClient;
 	public LockerService(HttpClient httpClient)
 	{
 		_httpClient = httpClient;
+		_jsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
 	}
 
 	public async Task<List<Locker>> GetAllLockersAsync()
@@ -81,5 +88,14 @@ public class LockerService
 			default:
 				throw new Exception("An error occurred while deleting the locker.");
 		}
+	}
+
+	public async Task<Locker?> SetLockerStatus(Locker locker, Enums.LockerStatus status)
+	{
+		if (locker == null)
+			throw new ArgumentNullException(nameof(locker), "Locker cannot be null.");
+
+		locker.Status = status;
+		return await UpdateLockerAsync(locker);
 	}
 }
