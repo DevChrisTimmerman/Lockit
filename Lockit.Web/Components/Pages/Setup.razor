@@ -1,12 +1,12 @@
 ﻿@page "/setup"
 
-<MudStepper @bind-ActiveIndex="_activeInde" ShowResetButton>
+<MudStepper @bind-ActiveIndex="_activeIndex" ShowResetButton>
 	<MudStep Title="Setup locker locations"> Setup locker locations</MudStep>
 	<MudStep Title="Setup lockers"> Setup locker</MudStep>
 	<MudStep Title="Overview"> Overview</MudStep>
 </MudStepper>
 
-@switch (_activeInde)
+@switch (_activeIndex)
 {
 		case 0:
 			<MudChip T="string" Color=Color.Success> Setup locker locations </MudChip>
@@ -20,5 +20,5 @@
 }
 
 @code {
-	private int _activeInde;
+	private int _activeIndex;
 }
