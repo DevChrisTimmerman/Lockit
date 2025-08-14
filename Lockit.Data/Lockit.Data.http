@@ -12,25 +12,18 @@ GET {{beginURL}}/api/lockers/30
 GET {{beginURL}}/api/lockers/user/30
 
 ###
-PUT {{beginURL}}/api/lockers/45
+PUT {{beginURL}}/api/lockers/46
 Content-Type: application/json
 
 {
-  "ID": 45,
-  "Number": "L045",
+  "ID": 46,
+  "Number": "L046",
+  "LocationID": 3,
   "StudentID": null,
-  "LocationID": 2,
   "Status": 2,
   "Location": {
     "ID": 2,
     "Name": "Science Wing",
     "Description": "Lockers in the science building"
-  },
-  "Student": {
-    "ID": 45,
-    "Name": "Lily",
-    "LastName": "Rivera",
-    "Email": "lily.rivera@school.com",
-    "Class": "1A"
   }
 }

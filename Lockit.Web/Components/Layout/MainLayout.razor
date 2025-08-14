@@ -1,7 +1,7 @@
 ﻿@inherits LayoutComponentBase
 
 @* Required *@
-<MudThemeProvider />
+<MudThemeProvider @bind-IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
 
 @* Needed for dialogs *@
@@ -21,7 +21,10 @@
 				<MudMenuItem IconColor="Color.Secondary"><Blazicon Svg="FlagIcon4x3.Nl"/>  Nederlands</MudMenuItem>
 				<MudMenuItem IconColor="Color.Secondary"><Blazicon Svg="FlagIcon4x3.Fr"/>  French</MudMenuItem>
 			</MudMenu>
-			<MudMenuItem Icon="@Icons.Material.TwoTone.DarkMode" IconColor="Color.Secondary" Label="Dark Theme"/>
+
+			<MudMenuItem Icon="@Icons.Material.TwoTone.DarkMode" IconColor="Color.Secondary" OnClick="() => _isDarkMode = !_isDarkMode">
+				<MudSwitch @bind-Value="_isDarkMode" T="bool" Label="Dark Theme" Color="Color.Primary" />
+			</MudMenuItem>
 		</MudMenu>
 	</MudAppBar>
 	<MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="15" >
@@ -41,7 +44,7 @@
 
 @code{
 	private bool _drawerOpen = false;
-
+	private bool _isDarkMode = false;
 	private void DrawerToggle()
 	{
 		_drawerOpen = !_drawerOpen;

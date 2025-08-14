@@ -19,6 +19,7 @@ public class Program
 		builder.Services.AddOpenApi();
 		builder.Services.AddTransient<ILockerRepository, LockerRepository>();
 		builder.Services.AddTransient<ILocationRepository, LocationRepository>();
+		builder.Services.AddTransient<IStudentRepository, StudentRepository>();
 
 		var app = builder.Build();
 
