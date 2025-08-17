@@ -38,14 +38,9 @@
 	private int _index = -1;
 	private double[] _data = [-1, -1, -1];
 	private string[] _labels = ["Available", "Occupied", "Maintenance"];
-	private string[] _locations = new string[] {};
+	private string[] _locations = [];
 
-	private List<ChartSeries> _series = new List<ChartSeries>()
-	{
-		new ChartSeries() { Name = "Available", Data = new double[] { 40, 48, 80, 15 } },
-		new ChartSeries() { Name = "Occupied", Data = new double[] { 19, 24, 16, 31 } },
-		new ChartSeries() { Name = "Maintenance", Data = new double[] { 8, 10, 16, 18 } },
-	};
+	private List<ChartSeries> _series = new List<ChartSeries>() { new(), new(), new(), };
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -55,6 +50,21 @@
 		_data[2] = lockers.Count(u => u.Status == Enums.LockerStatus.Maintenance);
 
 		_locations = (await LocationService.GetAllLocationsAsync()).Select(u => u.Name).ToArray();
+
+		for (var i = 0; i < _series.Count; i++)
+		{
+			var series = _series[i];
+			series.Name = ((Enums.LockerStatus)i).ToString();
+			series.Data = new double[_locations.Length];
+		}
+
+		for (int i = 0; i < _locations.Length; i++)
+		{
+			var locationName = _locations[i];
+			_series[0].Data[i] = lockers.Count(u => u.Location.Name == locationName && u.Status == Enums.LockerStatus.Available);
+			_series[1].Data[i] = lockers.Count(u => u.Location.Name == locationName && u.Status == Enums.LockerStatus.Occupied);
+			_series[2].Data[i] = lockers.Count(u => u.Location.Name == locationName && u.Status == Enums.LockerStatus.Maintenance);
+		}
 	}
 
 }
