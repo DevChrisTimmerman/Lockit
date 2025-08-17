@@ -15,12 +15,12 @@ public class Locker
 
 	[ForeignKey("LocationID")]
 	public Location Location { get; set; }
-	[ForeignKey("StudentID")]
-	public Student? Student { get; set; }
+
+	[ForeignKey("StudentID")] public Student? Student { get; set; } = null;
 
 	public Locker()
 	{
 		Location = new Location();
-		Student = new Student();
+		//Student = new Student();
 	}
 }

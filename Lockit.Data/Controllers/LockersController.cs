@@ -60,11 +60,6 @@ public class LockersController : Controller
 		{
 			return BadRequest("Locker data is invalid.");
 		}
-		var existingLocker = await _lockerRepository.GetLockerByIdAsync(lockerId);
-		if (existingLocker == null)
-		{
-			return NotFound();
-		}
 		var updatedLocker = await _lockerRepository.UpdateLockerAsync(locker);
 		return Ok(updatedLocker);
 	}

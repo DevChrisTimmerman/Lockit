@@ -1,7 +1,60 @@
 ﻿@page "/"
+@using Lockit.Models
+@using Lockit.Web.Services
+@using System.Linq
+
 
 <PageTitle>Home</PageTitle>
 
+<MudCard >
+	<MudCardMedia Image="images/lockitbanner.png" Height="200"/>
+	<MudCardContent>
+		<MudText Typo="Typo.h4" Align="Align.Left">Dashboard</MudText>
+		<MudText Typo="Typo.subtitle1" Align="Align.Center">Work in progress, open for feedback!.</MudText>
+	</MudCardContent>
+</MudCard>
+
+<MudGrid Class="pa-5" Spacing="10" Justify="Justify.Center">
+	<MudItem>
+		<MudChart ChartType="ChartType.Donut" Width="300px" Height="300px" @bind-SelectedIndex="_index" InputData="@_data" InputLabels="@_labels">
+			<CustomGraphics>
+				<text class="donut-inner-text" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="black" font-family="Helvetica" font-size="50"> @(_data[1] / @_data.Sum() * 100)%</text>
+			</CustomGraphics>
+		</MudChart>
+	</MudItem>
+	<MudItem>
+		<MudChart ChartType="ChartType.StackedBar" ChartSeries="@_series" @bind-SelectedIndex="_index" Width="500px" Height="300" XAxisLabels="_locations"></MudChart>
+	</MudItem>
+</MudGrid>
 
 
-Welcome to your new app.
+@code {
+
+	[Inject]
+	public LockerService LockerService { get; set; }
+	[Inject]
+	public LocationService LocationService { get; set; }
+
+	private int _index = -1;
+	private double[] _data = [-1, -1, -1];
+	private string[] _labels = ["Available", "Occupied", "Maintenance"];
+	private string[] _locations = new string[] {};
+
+	private List<ChartSeries> _series = new List<ChartSeries>()
+	{
+		new ChartSeries() { Name = "Available", Data = new double[] { 40, 48, 80, 15 } },
+		new ChartSeries() { Name = "Occupied", Data = new double[] { 19, 24, 16, 31 } },
+		new ChartSeries() { Name = "Maintenance", Data = new double[] { 8, 10, 16, 18 } },
+	};
+
+	protected override async Task OnInitializedAsync()
+	{
+		var lockers = await LockerService.GetAllLockersAsync();
+		_data[0] = lockers.Count(u => u.Status == Enums.LockerStatus.Available);
+		_data[1] = lockers.Count(u => u.Status == Enums.LockerStatus.Occupied);
+		_data[2] = lockers.Count(u => u.Status == Enums.LockerStatus.Maintenance);
+
+		_locations = (await LocationService.GetAllLocationsAsync()).Select(u => u.Name).ToArray();
+	}
+
+}

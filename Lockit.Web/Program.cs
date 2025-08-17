@@ -1,4 +1,3 @@
-using Azure.Core;
 using Lockit.Web.Components;
 using Lockit.Web.Services;
 using MudBlazor.Services;
@@ -14,6 +13,7 @@ namespace Lockit.Web
 			builder.Services.AddMudServices();
 			builder.Services.AddTransient<LockerService>();
 			builder.Services.AddTransient<LocationService>();
+			builder.Services.AddTransient<StudentService>();
 			builder.Services.AddSingleton(new HttpClient { BaseAddress = new Uri("http://localhost:5031/") });
 			// Add services to the container.
 			builder.Services.AddRazorComponents()

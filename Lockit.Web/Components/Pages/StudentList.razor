@@ -1,0 +1,86 @@
+﻿@page "/lists/students"
+@using Lockit.Models
+@using Lockit.Web.Services
+
+<MudTable Style="position: relative" Items="@_students" Filter="new Func<Student, bool>(SearchFunc)" Height="calc(80vh - (var(--mud-appbar-height) + 60px))" Loading="!_dataLoaded" Virtualize Hover FixedHeader>
+	<ToolBarContent>
+		<MudText Typo="Typo.h6">All Students</MudText>
+		<MudSpacer />
+		<MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"/>
+	</ToolBarContent>
+	<HeaderContent>
+		<MudTh><MudTableSortLabel SortBy="new Func<Student, object>(x => x.ID)">ID</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel SortBy="new Func<Student, object>(x => x.Name)">Name</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel SortBy="new Func<Student, object>(x => x.LastName)">LastName</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel SortBy="new Func<Student, object>(x => x.Class)">Class</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel SortBy="new Func<Student, object>(x => x.Email)">Email</MudTableSortLabel></MudTh>
+		<MudTh Style="text-align: center"><MudTableSortLabel SortBy="new Func<Student, object>(x => _studentsDictionary[x])">Has Locker</MudTableSortLabel></MudTh>
+	</HeaderContent>
+	<RowTemplate>
+		<MudTd>@context.ID</MudTd>
+		<MudTd>@context.Name</MudTd>
+		<MudTd>@context.LastName</MudTd>
+		<MudTd>@context.Class</MudTd>
+		<MudTd>@context.Email</MudTd>
+		<MudTd Style="text-align: center">
+			@if (_studentsDictionary[context])
+			{
+				<MudIcon Icon="@Icons.Material.Filled.CheckBox" Color="@Color.Primary"/>
+			}
+			else
+			{
+				<MudIcon Icon="@Icons.Material.Filled.CheckBoxOutlineBlank" Color="@Color.Secondary"/>
+			}
+		</MudTd>
+	</RowTemplate>
+	<PagerContent>
+		<MudTablePager PageSizeOptions="new[] { 10, 25, 100, int.MaxValue }"
+		               RowsPerPageString="Rows per page"
+		               AllItemsText="All"
+		               InfoFormat="{first_item}-{last_item} // {all_items}"/>
+	</PagerContent>
+	<LoadingContent>
+		<MudOverlay Visible="true" DarkBackground="true" Absolute="true">
+			<MudProgressCircular Color="Color.Secondary" Indeterminate="true" />
+		</MudOverlay>
+	</LoadingContent>
+</MudTable>
+
+
+@code {
+	[Inject]
+	public StudentService StudentService { get; set; }
+	[Inject]
+	public LockerService LockerService { get; set; }
+	private List<Student> _students = new List<Student>();
+	private Dictionary<Student, bool> _studentsDictionary = new Dictionary<Student, bool>();
+	private bool _dataLoaded = false;
+	private string _searchString = string.Empty;
+
+	protected override async Task OnInitializedAsync()
+	{
+		_students = await StudentService.GetAllStudentsAsync();
+		foreach (var student in _students)
+		{
+			_studentsDictionary[student] = await HasLocker(student.ID);
+		}
+		_dataLoaded = true;
+	}
+
+	private bool SearchFunc(Student student)
+	{
+		if (string.IsNullOrWhiteSpace(_searchString)) return true;
+
+		return student.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+						student.LastName.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+						student.Class.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+						student.Email.Contains(_searchString, StringComparison.OrdinalIgnoreCase);
+	}
+
+	private async Task<bool> HasLocker(int studentID)
+	{
+		Locker? result = await LockerService.GetLockerByUserIdAsync(studentID);
+		return result != null;
+	}
+
+}

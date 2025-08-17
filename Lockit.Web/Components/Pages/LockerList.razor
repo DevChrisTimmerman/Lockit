@@ -1,23 +1,23 @@
-﻿@page "/lockers"
+﻿@page "/lists/lockers"
 @using Lockit.Models
 @using Lockit.Web.Services
 
 <PageTitle>Locker List</PageTitle>
 
-<MudTable Style="position: relative" Items="@lockers" Hover="true" Filter="new Func<Locker, bool>(SearchFunc)" FixedHeader="true" Height="calc(80vh - var(--mud-appbar-height) - 10px)" Virtualize="true" Loading="!_dataLoaded">
+<MudTable Style="position: relative" Items="@_lockers" Filter="new Func<Locker, bool>(SearchFunc)" Height="calc(80vh - (var(--mud-appbar-height) + 60px))" Loading="!_dataLoaded" Virtualize Hover FixedHeader>
 	<ToolBarContent>
 		<MudText Typo="Typo.h6">All Lockers</MudText>
 		<MudSpacer />
-		<MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"/>
+		<MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"/>
 	</ToolBarContent>
 	<HeaderContent>
 		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Number)">Locker #</MudTableSortLabel></MudTh>
-		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x =>x.Student != null? x.Student.Name : false)">Name</MudTableSortLabel></MudTh>
-		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Student?.LastName)">Lastname</MudTableSortLabel></MudTh>
-		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Student?.Class)">Class</MudTableSortLabel></MudTh>
-		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Location)">Location</MudTableSortLabel></MudTh>
-		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Status)">Status</MudTableSortLabel></MudTh>
-		<MudTh><MudIcon Icon="@Icons.Material.Filled.DashboardCustomize" /></MudTh>
+		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Student != null ? x.Student.Name : _vacantLockerSort)">Name</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Student != null ? x.Student.LastName : _vacantLockerSort)">Lastname</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Student != null ? x.Student.Class : _vacantLockerSort)">Class</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Location.Name)">Location</MudTableSortLabel></MudTh>
+		<MudTh Style="text-align: center"><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Status)">Status</MudTableSortLabel></MudTh>
+		<MudTh Style="text-align: center"><MudIcon Icon="@Icons.Material.Filled.DashboardCustomize" /></MudTh>
 	</HeaderContent>
 	<RowTemplate>
 		<MudTd>@context.Number</MudTd>
@@ -25,20 +25,32 @@
 		<MudTd>@context.Student?.LastName</MudTd>
 		<MudTd>@context.Student?.Class</MudTd>
 		<MudTd>@context.Location.Name</MudTd>
-		<MudTd>
+		<MudTd Style="text-align: center">
 			<MudChip T="string" Color=@GetStatusChipColor(context.Status)> @context.Status </MudChip>
 		</MudTd>
-		<MudTd>
-			@if (context.Status == Enums.LockerStatus.Occupied)
+		<MudTd Style="text-align: center">
+			@switch (context.Status)
 			{
-				<MudIconButton Icon="@Icons.Material.Filled.PersonOff" Color="Color.Warning" OnClick="OnRemoveStudentClicked" />
+				case Enums.LockerStatus.Available:
+					<MudIconButton Icon="@Icons.Material.Filled.PersonAddAlt1" Color="Color.Success" OnClick="OnAddStudentClicked"/>
+					break;
+				case Enums.LockerStatus.Occupied:
+					<MudIconButton Icon="@Icons.Material.Filled.PersonOff" Color="Color.Warning" OnClick="OnRemoveStudentClicked"/>
+					break;
+				case Enums.LockerStatus.Maintenance:
+					<MudIconButton Disabled Icon="@Icons.Material.Filled.PersonAddAlt1" Color="Color.Warning" OnClick="OnRemoveStudentClicked" />
+					break;
+			}
+
+			@if (context.Status == Enums.LockerStatus.Maintenance)
+			{
+				<MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Success" OnClick="() => EnableLocker(context)"/>
 			}
 			else
 			{
-				<MudIconButton Icon="@Icons.Material.Filled.PersonAddAlt1" Color="Color.Success" OnClick="OnAddStudentClicked" />
+				<MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Error" OnClick="() => DisableLocker(context)"/>
 			}
 
-			<MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Error" OnClick="() => OnDisableLockerClicked(context)" />
 		</MudTd>
 	</RowTemplate>
 	<PagerContent>
@@ -58,41 +70,53 @@
 
 @* =================== Message boxes =================== *@
 
-<MudMessageBox @ref="_msgBox" Title="Warning" CancelText="Cancel">
+<MudMessageBox @ref="_disableMsgBox" Title="Warning" CancelText="Cancel">
 	<MessageContent>
 		Are you sure you want to mark this locker as <b>unavailable?</b>
 	</MessageContent>
 	<YesButton>
-		<MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever">Mark as unavailable!</MudButton>
+		<MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever">Unavailable</MudButton>
+	</YesButton>
+</MudMessageBox>
+
+<MudMessageBox @ref="_enableMsgBox" Title="Alert" CancelText="Cancel">
+	<MessageContent>
+		Are you sure you want to mark this locker as <b>available</b> again?
+	</MessageContent>
+	<YesButton>
+		<MudButton Variant="Variant.Filled" Color="Color.Success" StartIcon="@Icons.Material.Filled.CheckCircleOutline">Available!</MudButton>
 	</YesButton>
 </MudMessageBox>
 
 @code
 {
 	[Inject]
-	public LocationService LocationService { get; set; }
-	[Inject]
 	public LockerService LockerService { get; set; }
-	private List<Locker> lockers = new();
-	private string searchString = string.Empty;
-	private MudMessageBox _msgBox;
-	private string _msgBoxResult = string.Empty;
+	private List<Locker> _lockers = new();
+	private string _searchString = string.Empty;
+	private MudMessageBox _disableMsgBox = new();
+	private MudMessageBox _enableMsgBox = new();
 	private bool _dataLoaded = false;
+	private string _vacantLockerSort = "zzz";
 
 	protected override async Task OnInitializedAsync()
 	{
-		lockers = await LockerService.GetAllLockersAsync();
+		_lockers = await LockerService.GetAllLockersAsync();
 		_dataLoaded = true;
 	}
 
 	private bool SearchFunc(Locker locker)
 	{
-		if (string.IsNullOrWhiteSpace(searchString))
+		if (string.IsNullOrWhiteSpace(_searchString))
 			return true;
-		return locker.Student.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-			   locker.Student.LastName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-			   locker.Student.Class.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-			   locker.Location.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase);
+
+		if (locker.StudentID == null || locker.Student == null)
+			return false;
+
+		return locker.Student.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+			   locker.Student.LastName.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+			   locker.Student.Class.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+			   locker.Location.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase);
 	}
 
 	private Color GetStatusChipColor(Enums.LockerStatus status)
@@ -120,11 +144,23 @@
 
 	}
 
-	private async Task OnDisableLockerClicked(Locker locker)
+	private async Task DisableLocker(Locker locker)
 	{
-		bool? result = await _msgBox.ShowAsync();
-		_msgBoxResult = result is null ? "Canceled" : "Marked unavailable!";
-		await LockerService.SetLockerStatus(locker, Enums.LockerStatus.Maintenance);
-		StateHasChanged();
+		bool? result = await _disableMsgBox.ShowAsync();
+		if (result == true)
+		{
+			await LockerService.SetLockerStatus(locker, Enums.LockerStatus.Maintenance);
+			StateHasChanged();
+		}
+	}
+
+	private async Task EnableLocker(Locker locker)
+	{
+		bool? result = await _enableMsgBox.ShowAsync();
+		if (result == true)
+		{
+			await LockerService.SetLockerStatus(locker, Enums.LockerStatus.Available);
+			StateHasChanged();
+		}
 	}
 }
