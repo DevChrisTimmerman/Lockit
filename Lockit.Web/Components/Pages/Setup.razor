@@ -1,103 +1,129 @@
 ﻿@page "/setup"
+@using System.Xml
 
-<MudStepper @bind-ActiveIndex="_activeIndex" ShowResetButton OnPreviewInteraction="OnPreviewInteraction">
-	<MudStep Title="Setup locker locations" HasError="@(!ValidateLocations())"><MudChip T="string" Color=Color.Primary>Setup locker locations</MudChip></MudStep>
-	<MudStep Title="Setup lockers"><MudChip T="string" Color=Color.Primary>Setup lockers</MudChip></MudStep>
-	<MudStep Title="Overview"><MudChip T="string" Color=Color.Primary>Overview</MudChip></MudStep>
-
-
-@switch (_activeIndex)
-{
-	case 0:
-		@foreach (var loc in _locations)
-		{
-			<MudPaper Elevation="3">
-				<MudGrid Justify="Justify.FlexStart" Spacing="4" Class="ma-5 pa-3">
-					<MudItem xs="1">
-						<MudTooltip ShowOnFocus Arrow Placement="Placement.Top" Text="Leave empty if no Prefix is wanted" Color="Color.Primary">
-							<MudTextField T="string" Label="Prefix" @bind-Value="@loc.Prefix"/>
-						</MudTooltip>
-					</MudItem>
-					<MudItem xs="3">
-						<MudTextField T="string" Required Label="Name" @bind-Value="@loc.Name"/>
-					</MudItem>
-					<MudItem xs="7">
-						<MudTextField T="string" Label="Description" @bind-Value="@loc.Description"/>
-					</MudItem>
-				</MudGrid>
-			</MudPaper>
-		}
-		@*<MudButton ButtonType="ButtonType.Submit">Register</MudButton> *@
-		<MudGrid Justify="Justify.FlexEnd">
-			<MudItem>
-				<MudIconButton Icon="@Icons.Material.Filled.AddCircle" OnClick="AddLocation" Color="Color.Success" />
-				<MudIconButton Disabled="_locations.Count<2" Icon="@Icons.Material.Filled.Cancel" OnClick="RemoveLocation" Color="Color.Secondary" />
-			</MudItem>
-		</MudGrid>
-		break;
-	case 1:
-		@for (int i = 0; i < _locations.Count; i++)
-		{
-			var loc = _locations[i];
-			int index = i;
-			<MudPaper Elevation="3">
-				<MudGrid Justify="Justify.FlexStart" Spacing="4" Class="ma-5 pa-3">
-					<MudItem xs="3">
-						<MudText>@loc.Name </MudText>
-					</MudItem>
-					<MudItem xs="3">
-						<MudText>@loc.Prefix </MudText>
-					</MudItem>
-					<MudItem xs="2">
-						<MudTextField Required T="int?" Label="Locker count" @bind-Value="_locationsTotalCounts[index]"/>
-					</MudItem>
-					<MudItem xs="2">
-						<MudTextField Required T="int?" Label="Locker colum count" @bind-Value="_locationsTotalPerColumnCounts[index]"/>
-					</MudItem>
-				</MudGrid>
-			</MudPaper>
-		}
-		break;
-	case 2:
-		<MudGrid Class="pa-10" Justify="Justify.SpaceEvenly">
-			@for (var i = 0; i < _locations.Count; i++)
+<MudStepper ShowResetButton OnPreviewInteraction="OnPreviewInteraction">
+	<ChildContent>
+		<MudStep Title="Setup locker locations" HasError="@(!ValidateLocations())">
+			<MudChip T="string" Color=Color.Primary>Setup locker locations</MudChip>
+			@foreach (var loc in _locations)
+			{
+				<MudPaper Elevation="3">
+					<MudGrid Justify="Justify.FlexStart" Spacing="4" Class="ma-5 pa-3">
+						<MudItem xs="1">
+							<MudTooltip ShowOnFocus Arrow Placement="Placement.Top" Text="Leave empty if no Prefix is wanted" Color="Color.Primary">
+								<MudTextField T="string" Label="Prefix" @bind-Value="@loc.Prefix"/>
+							</MudTooltip>
+						</MudItem>
+						<MudItem xs="3">
+							<MudTextField T="string" Required Label="Name" @bind-Value="@loc.Name"/>
+						</MudItem>
+						<MudItem xs="7">
+							<MudTextField T="string" Label="Description" @bind-Value="@loc.Description"/>
+						</MudItem>
+					</MudGrid>
+				</MudPaper>
+			}
+			<MudGrid Justify="Justify.FlexEnd">
+				<MudItem>
+					<MudIconButton Icon="@Icons.Material.Filled.AddCircle" OnClick="AddLocation" Color="Color.Success"/>
+					<MudIconButton Disabled="_locations.Count < 2" Icon="@Icons.Material.Filled.Cancel" OnClick="RemoveLocation" Color="Color.Secondary"/>
+				</MudItem>
+			</MudGrid>
+		</MudStep>
+		<MudStep Title="Setup lockers">
+			<MudChip T="string" Color=Color.Primary>Setup lockers</MudChip>
+			@for (int i = 0; i < _locations.Count; i++)
 			{
 				var loc = _locations[i];
 				int index = i;
-				<MudPaper Elevation="3" Class="pa-4 ma-2">
-					<MudItem>
-						<MudGrid>
-							<MudItem Style="width: auto; min-width: 100px">
-								<MudText>@loc.Name </MudText>
-								<MudText>Prefix: @loc.Prefix </MudText>
-							</MudItem>
-							<MudItem>
-							<MudDivider Vertical/>
-							</MudItem>
-							<MudItem>
-								<MudText>Total: @_locationsTotalCounts[index] </MudText>
-								<MudText>Per Column: @_locationsTotalPerColumnCounts[index] </MudText>
-							</MudItem>
-						</MudGrid>
-
-					</MudItem>
+				<MudPaper Elevation="3">
+					<MudGrid Justify="Justify.FlexStart" Spacing="4" Class="ma-5 pa-3">
+						<MudItem xs="3">
+							<MudText>@loc.Name </MudText>
+						</MudItem>
+						<MudItem xs="3">
+							<MudText>@loc.Prefix </MudText>
+						</MudItem>
+						<MudItem xs="2">
+							<MudTextField Required T="int?" Label="Total lockers" @bind-Value="_locationsTotalCounts[index]"/>
+						</MudItem>
+						<MudItem xs="2">
+							<MudTextField Required T="int?" Label="Lockers per column" @bind-Value="_locationsTotalPerColumnCounts[index]"/>
+						</MudItem>
+					</MudGrid>
 				</MudPaper>
 			}
+		</MudStep>
+		<MudStep Title="Overview">
+			@if (_completed == false)
+			{
+				<MudChip T="string" Color=Color.Primary>Overview</MudChip>
+				<MudGrid Class="pa-10" Justify="Justify.SpaceEvenly">
+					@for (var i = 0; i < _locations.Count; i++)
+					{
+						var loc = _locations[i];
+						int index = i;
+						<MudPaper Elevation="3" Class="pa-4 ma-2">
+							<MudItem>
+								<MudGrid>
+									<MudItem Style="width: auto; min-width: 100px">
+										<MudText>@loc.Name </MudText>
+										<MudText>Prefix: @loc.Prefix </MudText>
+									</MudItem>
+									<MudItem>
+										<MudDivider Vertical/>
+									</MudItem>
+									<MudItem>
+										<MudText>Total: @_locationsTotalCounts[index] </MudText>
+										<MudText>Per Column: @_locationsTotalPerColumnCounts[index] </MudText>
+									</MudItem>
+								</MudGrid>
+							</MudItem>
+						</MudPaper>
+					}
+				</MudGrid>
+			}
+		</MudStep>
+
+		@if (_completed)
+		{
+			<MudGrid Justify="Justify.Center">
+				<MudItem>
+					@if (_isDBrequestProcessed)
+					{
+						<MudText Class="ma-20">Lockit setup complete! <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" /></MudText>
+					}
+					else
+					{
+						<div class="loader">
+							<div class="box box0"><div></div></div>
+							<div class="box box1"><div></div></div>
+							<div class="box box2"><div></div></div>
+							<div class="box box3"><div></div></div>
+							<div class="box box4"><div></div></div>
+							<div class="box box5"><div></div></div>
+							<div class="box box6"><div></div></div>
+							<div class="box box7"><div></div></div>
+							<div class="ground"><div></div></div>
+						</div>
+					}
+				</MudItem>
 			</MudGrid>
-		break;
-	case 3:
-		
-		break;
-	}
+		}
+	</ChildContent>
 </MudStepper>
 
 @code {
 	[Inject] 
-	IDialogService DialogService { get; set; }
-	private int _activeIndex;
+	public IDialogService DialogService { get; set; }
+	[Inject]
+	public LocationService LocationService { get; set; }
 	private List<Location> _locations = new List<Location>();
 	private List<int?> _locationsTotalCounts = new List<int?>();
 	private List<int?> _locationsTotalPerColumnCounts = new List<int?>();
+
+	private bool _isDBrequestProcessed;
+	private bool _completed;
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -158,7 +184,9 @@
 				}
 				break;
 			case 2:
-				FinilizeSetup();
+				_completed = true;
+				StateHasChanged();
+				await FinalizeSetup();
 				break;
 		}
 	}
@@ -209,9 +237,18 @@
 		return true;
 	}
 
-	private void FinilizeSetup()
+	private async Task<bool> FinalizeSetup()
 	{
-
+		foreach (var loc in _locations)
+		{
+			//wait 1 second per location
+			//await Task.Delay(1000);
+			//await LocationService.AddLocationAsync(loc);
+		}
+		//wait 3 seconds
+		await Task.Delay(3000);
+		_isDBrequestProcessed = true;
+		return true;
 	}
 
 }
