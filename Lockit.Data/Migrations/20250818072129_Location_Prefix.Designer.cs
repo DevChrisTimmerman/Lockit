@@ -3,6 +3,7 @@ using Lockit.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lockit.Data.Migrations
 {
     [DbContext(typeof(LockitDbContext))]
-    partial class LockitDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250818072129_Location_Prefix")]
+    partial class Location_Prefix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -38,6 +41,7 @@ namespace Lockit.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Prefix")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ID");

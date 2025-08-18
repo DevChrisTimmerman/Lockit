@@ -1,6 +1,4 @@
 ﻿@page "/register"
-@using Lockit.Models
-@using Lockit.Web.Services
 
 @if (registrationDone == false)
 {
@@ -21,11 +19,18 @@ else
 	<MudAlert Severity="Severity.Success">Registration successful!</MudAlert>
 }
 
-@inject LockerService LockerService
+
 @code {
+	[Inject]
+	public LockerService LockerService { get; set; }
 	private Locker locker = new Locker();
 
 	private bool registrationDone = false;
+
+	protected override async Task OnInitializedAsync()
+	{
+		InitializeEmptyLocker();
+	}
 
 	private async Task OnValidSubmit()
 	{
@@ -33,9 +38,13 @@ else
 		if (success)
 		{
 			registrationDone = true;
-			locker = new Locker(); // Reset the form after submission
-			
-
+			InitializeEmptyLocker();
 		}
+	}
+
+	private void InitializeEmptyLocker()
+	{
+		locker = new Locker();
+		locker.Student = new Student();
 	}
 }

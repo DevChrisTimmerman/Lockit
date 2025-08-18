@@ -1,5 +1,4 @@
 ﻿@page "/lists/locations"
-@using Lockit.Models
 @using Lockit.Web.Services
 
 <MudTable Style="position: relative" Items="@locations" Filter="new Func<Location, bool>(SearchFunc)"  Height="calc(80vh - (var(--mud-appbar-height) + 60px))" Loading="!_dataLoaded" Virtualize Hover FixedHeader>
@@ -11,6 +10,7 @@
 	<HeaderContent>
 		<MudTh><MudTableSortLabel SortBy="new Func<Location, object>(x => x.ID)">ID</MudTableSortLabel></MudTh>
 		<MudTh><MudTableSortLabel SortBy="new Func<Location, object>(x =>x.Name)">Location</MudTableSortLabel></MudTh>
+		<MudTh><MudTableSortLabel SortBy="new Func<Location, object>(x =>x.Prefix)">Prefix</MudTableSortLabel></MudTh>
 		<MudTh Style="text-align: center">Locker count</MudTh>
 		<MudTh><MudTableSortLabel SortBy="new Func<Location, object>(x => x.Description)">Description</MudTableSortLabel></MudTh>
 		<MudTh Style="text-align: center"><MudIcon Icon="@Icons.Material.Filled.DashboardCustomize" /></MudTh>
@@ -18,6 +18,7 @@
 	<RowTemplate>
 		<MudTd>@context.ID</MudTd>
 		<MudTd>@context.Name</MudTd>
+		<MudTd>@context.Prefix</MudTd>
 		<MudTd Style="text-align: center">...</MudTd>
 		<MudTd>@context.Description</MudTd>
 		<MudTd Style="text-align: center">

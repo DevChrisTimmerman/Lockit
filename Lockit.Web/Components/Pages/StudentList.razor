@@ -1,6 +1,4 @@
 ﻿@page "/lists/students"
-@using Lockit.Models
-@using Lockit.Web.Services
 
 <MudTable Style="position: relative" Items="@_students" Filter="new Func<Student, bool>(SearchFunc)" Height="calc(80vh - (var(--mud-appbar-height) + 60px))" Loading="!_dataLoaded" Virtualize Hover FixedHeader>
 	<ToolBarContent>
