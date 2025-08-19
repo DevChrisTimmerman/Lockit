@@ -1,9 +1,19 @@
 ﻿@page "/setup"
-@using System.Xml
+
+
+@if (AppStateService.IsLocationSetupComplete)
+{
+	<MudAlert Severity="Severity.Info">
+		<MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+		You are all set to go! <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success"/>
+		</MudStack>
+	</MudAlert>
+	return;
+}
 
 <MudStepper ShowResetButton OnPreviewInteraction="OnPreviewInteraction">
 	<ChildContent>
-		<MudStep Title="Setup locker locations" HasError="@(!ValidateLocations())">
+		<MudStep Title="Setup locker locations" HasError="@_locationsStepHasErrors">
 			<MudChip T="string" Color=Color.Primary>Setup locker locations</MudChip>
 			@foreach (var loc in _locations)
 			{
@@ -11,14 +21,14 @@
 					<MudGrid Justify="Justify.FlexStart" Spacing="4" Class="ma-5 pa-3">
 						<MudItem xs="1">
 							<MudTooltip ShowOnFocus Arrow Placement="Placement.Top" Text="Leave empty if no Prefix is wanted" Color="Color.Primary">
-								<MudTextField T="string" Label="Prefix" @bind-Value="@loc.Prefix"/>
+								<MudTextField Variant="Variant.Outlined" T="string" Label="Prefix" @bind-Value="@loc.Prefix"/>
 							</MudTooltip>
 						</MudItem>
 						<MudItem xs="3">
-							<MudTextField T="string" Required Label="Name" @bind-Value="@loc.Name"/>
+							<MudTextField Variant="Variant.Outlined" T="string" Required Label="Name" @bind-Value="@loc.Name" />
 						</MudItem>
 						<MudItem xs="7">
-							<MudTextField T="string" Label="Description" @bind-Value="@loc.Description"/>
+							<MudTextField Variant="Variant.Outlined" T="string" Label="Description" @bind-Value="@loc.Description" AutoGrow MaxLines="3" HelperText="Leave empty if no Description is needed" HelperTextOnFocus />
 						</MudItem>
 					</MudGrid>
 				</MudPaper>
@@ -30,8 +40,8 @@
 				</MudItem>
 			</MudGrid>
 		</MudStep>
-		<MudStep Title="Setup lockers">
-			<MudChip T="string" Color=Color.Primary>Setup lockers</MudChip>
+		<MudStep Title="Setup locker amounts" HasError="@_locationsAmountsHasError">
+			<MudChip T="string" Color=Color.Primary>Setup locker amounts</MudChip>
 			@for (int i = 0; i < _locations.Count; i++)
 			{
 				var loc = _locations[i];
@@ -39,16 +49,16 @@
 				<MudPaper Elevation="3">
 					<MudGrid Justify="Justify.FlexStart" Spacing="4" Class="ma-5 pa-3">
 						<MudItem xs="3">
-							<MudText>@loc.Name </MudText>
+							<MudTextField Label="Name" ReadOnly @bind-Value="@loc.Name" Variant="Variant.Filled" />
 						</MudItem>
 						<MudItem xs="3">
-							<MudText>@loc.Prefix </MudText>
+							<MudTextField Label="Prefix" ReadOnly @bind-Value="@loc.Prefix" Variant="Variant.Filled" />
 						</MudItem>
 						<MudItem xs="2">
-							<MudTextField Required T="int?" Label="Total lockers" @bind-Value="_locationsTotalCounts[index]"/>
+							<MudTextField Variant="Variant.Outlined" Required T="int?" Label="Total lockers" @bind-Value="_locationsTotalCounts[index]" />
 						</MudItem>
 						<MudItem xs="2">
-							<MudTextField Required T="int?" Label="Lockers per column" @bind-Value="_locationsTotalPerColumnCounts[index]"/>
+							<MudTextField Variant="Variant.Outlined" Required T="int?" Label="Lockers per column" @bind-Value="_locationsTotalPerColumnCounts[index]" />
 						</MudItem>
 					</MudGrid>
 				</MudPaper>
@@ -91,7 +101,10 @@
 				<MudItem>
 					@if (_isDBrequestProcessed)
 					{
+						<MudStack Row AlignItems="AlignItems.Center" Spacing="1">
 						<MudText Class="ma-20">Lockit setup complete! <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" /></MudText>
+						</MudStack>
+						AppStateService.MarkLocationSetupComplete();
 					}
 					else
 					{
@@ -118,9 +131,14 @@
 	public IDialogService DialogService { get; set; }
 	[Inject]
 	public LocationService LocationService { get; set; }
+	[Inject]
+	public AppStateService AppStateService { get; set; }
 	private List<Location> _locations = new List<Location>();
 	private List<int?> _locationsTotalCounts = new List<int?>();
 	private List<int?> _locationsTotalPerColumnCounts = new List<int?>();
+
+	private bool _locationsStepHasErrors = false;
+	private bool _locationsAmountsHasError = false;
 
 	private bool _isDBrequestProcessed;
 	private bool _completed;
@@ -141,8 +159,8 @@
 	private void RemoveLocation()
 	{
 		_locations.RemoveAt(_locations.Count - 1);
-		_locationsTotalCounts.Remove(_locationsTotalCounts.Count - 1);
-		_locationsTotalPerColumnCounts.Remove(_locationsTotalPerColumnCounts.Count - 1);
+		_locationsTotalCounts.RemoveAt(_locationsTotalCounts.Count - 1);
+		_locationsTotalPerColumnCounts.RemoveAt(_locationsTotalPerColumnCounts.Count - 1);
 	}
 
 	private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
@@ -177,7 +195,7 @@
 				}
 				break;
 			case 1:
-				if (ValidateLockers() == false)
+				if (ValidateLockerAmounts() == false)
 				{
 					await DialogService.ShowMessageBox("Error", "Please enter valid locker counts for all locations, \r\n The total locker counter per location should be divisible by column count");
 					arg.Cancel = true;
@@ -197,20 +215,23 @@
 		{
 			if (string.IsNullOrWhiteSpace(loc.Name))
 			{
+				_locationsStepHasErrors = true;
 				return false;
 			}
 		}
 
+		_locationsStepHasErrors = false;
 		return true;
 	}
 
-	private bool ValidateLockers()
+	private bool ValidateLockerAmounts()
 	{
 		//Check for nulls
 		foreach (var count in _locationsTotalCounts)
 		{
 			if (count == null)
 			{
+				_locationsAmountsHasError = true;
 				return false;
 			}
 		}
@@ -220,6 +241,7 @@
 		{
 			if (count == null)
 			{
+				_locationsAmountsHasError = true;
 				return false;
 			}
 		}
@@ -234,6 +256,14 @@
 			}
 		}
 
+		//Set the lockers per column for each location
+		for (var i = 0; i < _locations.Count; i++)
+		{
+			var loc = _locations[i];
+			loc.LockersPerColumn = (int)_locationsTotalPerColumnCounts[i];
+		}
+
+		_locationsAmountsHasError = false;
 		return true;
 	}
 
@@ -241,9 +271,7 @@
 	{
 		foreach (var loc in _locations)
 		{
-			//wait 1 second per location
-			//await Task.Delay(1000);
-			//await LocationService.AddLocationAsync(loc);
+			await LocationService.AddLocationAsync(loc);
 		}
 		//wait 3 seconds
 		await Task.Delay(3000);
