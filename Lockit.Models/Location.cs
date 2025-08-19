@@ -7,5 +7,6 @@ public class Location
 	public int ID { get; set; }
 	public string Name { get; set; }
 	public string? Prefix { get; set; }
-	public string Description { get; set; }
+	public string? Description { get; set; }
+	public int LockersPerColumn { get; set; }
 }
