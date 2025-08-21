@@ -13,14 +13,9 @@ public class Locker
 	public int LocationID { get; set; }
 	public Enums.LockerStatus Status { get; set; }
 
-	[ForeignKey("LocationID")]
+	[ForeignKey(nameof(LocationID))]
 	public Location Location { get; set; }
 
-	[ForeignKey("StudentID")] public Student? Student { get; set; } = null;
-
-	public Locker()
-	{
-		Location = new Location();
-		//Student = new Student();
-	}
+	[ForeignKey(nameof(StudentID))]
+	public Student? Student { get; set; } = null;
 }

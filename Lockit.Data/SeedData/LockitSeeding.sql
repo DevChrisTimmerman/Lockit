@@ -1,107 +1,173 @@
+-- Enable identity insert for Locations
+SET IDENTITY_INSERT Locations ON;
 -- Seed Locations
-INSERT INTO Locations (Name, Description) VALUES
-('Main Hall', 'Lockers near the main entrance'),
-('Science Wing', 'Lockers in the science building'),
-('Library', 'Lockers near the library'),
-('Gym', 'Lockers in the gym area');
+INSERT INTO Locations (ID, Name, Prefix, Description, LockerCount, LockersPerColumn) VALUES
+(1, 'Main Hall', 'MH', 'Lockers near the main entrance', 20, 5),
+(2, 'Science Wing', 'SW', 'Lockers in the science building', 15, 5),
+(3, 'Library', 'Lib', 'Lockers near the library', 15, 5),
+(4, 'Gym', 'G', 'Lockers in the gym area', 15, 5);
+SET IDENTITY_INSERT Locations OFF;
 
--- Seed Students
-INSERT INTO Students (Name, LastName, Email, Class) VALUES
-('Emma', 'Johnson', 'emma.johnson@school.com', '3B'),
-('Liam', 'Williams', 'liam.williams@school.com', '2A'),
-('Olivia', 'Brown', 'olivia.brown@school.com', '5C'),
-('Noah', 'Jones', 'noah.jones@school.com', '1D'),
-('Ava', 'Garcia', 'ava.garcia@school.com', '4A'),
-('Elijah', 'Miller', 'elijah.miller@school.com', '6B'),
-('Sophia', 'Davis', 'sophia.davis@school.com', '2C'),
-('Mason', 'Martinez', 'mason.martinez@school.com', '3A'),
-('Isabella', 'Rodriguez', 'isabella.rodriguez@school.com', '1B'),
-( 'Lucas', 'Hernandez', 'lucas.hernandez@school.com', '5D'),
-( 'Mia', 'Lopez', 'mia.lopez@school.com', '4C'),
-( 'Logan', 'Gonzalez', 'logan.gonzalez@school.com', '2B'),
-( 'Charlotte', 'Wilson', 'charlotte.wilson@school.com', '6A'),
-( 'Ethan', 'Anderson', 'ethan.anderson@school.com', '3D'),
-( 'Amelia', 'Thomas', 'amelia.thomas@school.com', '1C'),
-( 'James', 'Taylor', 'james.taylor@school.com', '5B'),
-( 'Harper', 'Moore', 'harper.moore@school.com', '4D'),
-( 'Benjamin', 'Jackson', 'benjamin.jackson@school.com', '2D'),
-( 'Evelyn', 'Martin', 'evelyn.martin@school.com', '6C'),
-( 'Henry', 'Lee', 'henry.lee@school.com', '3C'),
-( 'Abigail', 'Perez', 'abigail.perez@school.com', '1A'),
-( 'Sebastian', 'Thompson', 'sebastian.thompson@school.com', '5A'),
-( 'Emily', 'White', 'emily.white@school.com', '4B'),
-( 'Jack', 'Harris', 'jack.harris@school.com', '2A'),
-( 'Elizabeth', 'Sanchez', 'elizabeth.sanchez@school.com', '6D'),
-( 'Alexander', 'Clark', 'alexander.clark@school.com', '3B'),
-( 'Sofia', 'Ramirez', 'sofia.ramirez@school.com', '1D'),
-( 'Daniel', 'Lewis', 'daniel.lewis@school.com', '5C'),
-( 'Avery', 'Robinson', 'avery.robinson@school.com', '4A'),
-( 'Matthew', 'Walker', 'matthew.walker@school.com', '2C'),
-( 'Ella', 'Young', 'ella.young@school.com', '6B'),
-( 'Jackson', 'Allen', 'jackson.allen@school.com', '3A'),
-( 'Scarlett', 'King', 'scarlett.king@school.com', '1B'),
-( 'David', 'Wright', 'david.wright@school.com', '5D'),
-( 'Grace', 'Scott', 'grace.scott@school.com', '4C'),
-( 'Carter', 'Torres', 'carter.torres@school.com', '2B'),
-( 'Chloe', 'Nguyen', 'chloe.nguyen@school.com', '6A'),
-( 'Wyatt', 'Hill', 'wyatt.hill@school.com', '3D'),
-( 'Penelope', 'Flores', 'penelope.flores@school.com', '1C'),
-( 'Julian', 'Green', 'julian.green@school.com', '5B'),
-( 'Layla', 'Adams', 'layla.adams@school.com', '4D'),
-( 'Leo', 'Nelson', 'leo.nelson@school.com', '2D'),
-( 'Victoria', 'Baker', 'victoria.baker@school.com', '6C'),
-( 'Gabriel', 'Hall', 'gabriel.hall@school.com', '3C'),
-( 'Lily', 'Rivera', 'lily.rivera@school.com', '1A');
+-- Create a temporary table to store the generated student IDs
+CREATE TABLE #TempStudents
+(
+    ID INT,
+    Email VARCHAR(100)
+);
 
--- Seed Lockers
-INSERT INTO Lockers (Number, StudentID, LocationID, Status) VALUES
-('L001', 1, 1, 1),
-('L002', 2, 2, 1),
-('L003', 3, 3, 1),
-('L004', 4, 4, 1),
-('L005', 5, 1, 1),
-('L006', 6, 2, 1),
-('L007', 7, 3, 1),
-('L008', 8, 4, 1),
-('L009', 9, 1, 1),
-('L010', 10, 2, 1),
-('L011', 11, 3, 1),
-('L012', 12, 4, 1),
-('L013', 13, 1, 1),
-('L014', 14, 2, 1),
-('L015', 15, 3, 1),
-('L016', 16, 4, 1),
-('L017', 17, 1, 1),
-('L018', 18, 2, 1),
-('L019', 19, 3, 1),
-('L020', 20, 4, 1),
-('L021', 21, 1, 1),
-('L022', 22, 2, 1),
-('L023', 23, 3, 1),
-('L024', 24, 4, 1),
-('L025', 25, 1, 1),
-('L026', 26, 2, 1),
-('L027', 27, 3, 1),
-('L028', 28, 4, 1),
-('L029', 29, 1, 1),
-('L030', 30, 2, 1),
-('L031', 31, 3, 1),
-('L032', 32, 4, 1),
-('L033', 33, 1, 1),
-('L034', 34, 2, 1),
-('L035', 35, 3, 1),
-('L036', 36, 4, 1),
-('L037', 37, 1, 1),
-('L038', 38, 2, 1),
-('L039', 39, 3, 1),
-('L040', 40, 4, 1),
-('L041', 41, 1, 1),
-('L042', 42, 2, 1),
-('L043', 43, 3, 1),
-('L044', 44, 4, 1),
-('L045', 45, 1, 1),
-('L046', 1, 2, 0),
-('L047', 2, 3, 0),
-('L048', 3, 4, 0),
-('L049', 4, 1, 0),
-('L050', 5, 2, 0);
+-- Insert students and capture their generated IDs
+INSERT INTO Students (Name, LastName, Email, Class, SCUID)
+OUTPUT inserted.ID, inserted.Email INTO #TempStudents
+VALUES
+('Emma', 'Johnson', 'emma.johnson@school.com', '3B', 'SCU001'),
+('Liam', 'Williams', 'liam.williams@school.com', '2A', 'SCU002'),
+('Olivia', 'Brown', 'olivia.brown@school.com', '5C', 'SCU003'),
+('Noah', 'Jones', 'noah.jones@school.com', '1D', 'SCU004'),
+('Ava', 'Garcia', 'ava.garcia@school.com', '4A', 'SCU005'),
+('Elijah', 'Miller', 'elijah.miller@school.com', '6B', 'SCU006'),
+('Sophia', 'Davis', 'sophia.davis@school.com', '2C', 'SCU007'),
+('Mason', 'Martinez', 'mason.martinez@school.com', '3A', 'SCU008'),
+('Isabella', 'Rodriguez', 'isabella.rodriguez@school.com', '1B', 'SCU009'),
+('Lucas', 'Hernandez', 'lucas.hernandez@school.com', '5D', 'SCU010'),
+('Mia', 'Lopez', 'mia.lopez@school.com', '4C', 'SCU011'),
+('Logan', 'Gonzalez', 'logan.gonzalez@school.com', '2B', 'SCU012'),
+('Charlotte', 'Wilson', 'charlotte.wilson@school.com', '6A', 'SCU013'),
+('Ethan', 'Anderson', 'ethan.anderson@school.com', '3D', 'SCU014'),
+('Amelia', 'Thomas', 'amelia.thomas@school.com', '1C', 'SCU015'),
+('Oliver', 'White', 'oliver.white@school.com', '4B', 'SCU016'),
+('Aria', 'Hall', 'aria.hall@school.com', '2D', 'SCU017'),
+('Henry', 'Clark', 'henry.clark@school.com', '5A', 'SCU018'),
+('Luna', 'Lewis', 'luna.lewis@school.com', '3C', 'SCU019'),
+('Jack', 'Young', 'jack.young@school.com', '1A', 'SCU020'),
+('Nova', 'Walker', 'nova.walker@school.com', '4D', 'SCU021'),
+('Leo', 'King', 'leo.king@school.com', '2C', 'SCU022'),
+('Hazel', 'Wright', 'hazel.wright@school.com', '5B', 'SCU023'),
+('Felix', 'Lopez', 'felix.lopez@school.com', '3B', 'SCU024'),
+('Aurora', 'Hill', 'aurora.hill@school.com', '1D', 'SCU025'),
+('Finn', 'Scott', 'finn.scott@school.com', '4A', 'SCU026'),
+('Ruby', 'Green', 'ruby.green@school.com', '2B', 'SCU027'),
+('Atlas', 'Adams', 'atlas.adams@school.com', '5D', 'SCU028'),
+('Cora', 'Baker', 'cora.baker@school.com', '3A', 'SCU029'),
+('Axel', 'Carter', 'axel.carter@school.com', '1C', 'SCU030'),
+('Isla', 'Morris', 'isla.morris@school.com', '4C', 'SCU031'),
+('Hugo', 'Price', 'hugo.price@school.com', '2D', 'SCU032'),
+('Eden', 'Ross', 'eden.ross@school.com', '5A', 'SCU033'),
+('Owen', 'Cole', 'owen.cole@school.com', '3D', 'SCU034'),
+('Ivy', 'Ward', 'ivy.ward@school.com', '1B', 'SCU035'),
+('Max', 'Fox', 'max.fox@school.com', '4B', 'SCU036'),
+('Eve', 'Gray', 'eve.gray@school.com', '2A', 'SCU037'),
+('Leo', 'Hunt', 'leo.hunt@school.com', '5C', 'SCU038'),
+('Mae', 'West', 'mae.west@school.com', '3C', 'SCU039'),
+('Ray', 'Nash', 'ray.nash@school.com', '1A', 'SCU040'),
+('Joy', 'Day', 'joy.day@school.com', '4D', 'SCU041'),
+('Kai', 'Shaw', 'kai.shaw@school.com', '2C', 'SCU042'),
+('Ana', 'Boyd', 'ana.boyd@school.com', '5B', 'SCU043'),
+('Rex', 'Page', 'rex.page@school.com', '3B', 'SCU044'),
+('Zoe', 'Reid', 'zoe.reid@school.com', '1D', 'SCU045'),
+('Ian', 'Hart', 'ian.hart@school.com', '4A', 'SCU046'),
+('Amy', 'Lane', 'amy.lane@school.com', '2B', 'SCU047'),
+('Ben', 'Hale', 'ben.hale@school.com', '5D', 'SCU048'),
+('Sky', 'Moss', 'sky.moss@school.com', '3A', 'SCU049'),
+('Tom', 'Kent', 'tom.kent@school.com', '1C', 'SCU050'),
+('Mae', 'Bond', 'mae.bond@school.com', '4C', 'SCU051'),
+('Sam', 'Wade', 'sam.wade@school.com', '2D', 'SCU052'),
+('Ava', 'Tate', 'ava.tate@school.com', '5A', 'SCU053'),
+('Oscar', 'Chen', 'oscar.chen@school.com', '3B', 'SCU054'),
+('Lily', 'Zhang', 'lily.zhang@school.com', '4A', 'SCU055'),
+('Gabriel', 'Cooper', 'gabriel.cooper@school.com', '2C', 'SCU056'),
+('Sofia', 'Patel', 'sofia.patel@school.com', '5B', 'SCU057'),
+('Lucas', 'Kim', 'lucas.kim@school.com', '1D', 'SCU058'),
+('Maya', 'Singh', 'maya.singh@school.com', '4C', 'SCU059');
+
+-- Enable identity insert for Lockers
+SET IDENTITY_INSERT Lockers ON;
+
+-- Insert Lockers using the generated student IDs from our temp table
+INSERT INTO Lockers (ID, Number, StudentID, LocationID, Status)
+SELECT 
+    L.ID,
+    L.Number,
+    TS.ID,
+    L.LocationID,
+    L.Status
+FROM (
+    VALUES
+    -- Main Hall Lockers (20 total)
+    (1, 'MH01', 'emma.johnson@school.com', 1, 1),
+    (2, 'MH02', 'liam.williams@school.com', 1, 1),
+    (3, 'MH03', 'olivia.brown@school.com', 1, 1),
+    (4, 'MH04', 'noah.jones@school.com', 1, 1),
+    (5, 'MH05', 'ava.garcia@school.com', 1, 1),
+    (6, 'MH06', 'elijah.miller@school.com', 1, 1),
+    (7, 'MH07', 'sophia.davis@school.com', 1, 1),
+    (8, 'MH08', 'mason.martinez@school.com', 1, 1),
+    (9, 'MH09', 'isabella.rodriguez@school.com', 1, 1),
+    (10, 'MH10', 'lucas.hernandez@school.com', 1, 1),
+    (11, 'MH11', 'mia.lopez@school.com', 1, 1),
+    (12, 'MH12', 'logan.gonzalez@school.com', 1, 1),
+    (13, 'MH13', 'charlotte.wilson@school.com', 1, 1),
+    (14, 'MH14', NULL, 1, 0), -- Available
+    (15, 'MH15', 'amelia.thomas@school.com', 1, 1),
+    (16, 'MH16', 'oliver.white@school.com', 1, 1),
+    (17, 'MH17', 'aria.hall@school.com', 1, 1),
+    (18, 'MH18', 'henry.clark@school.com', 1, 1), 
+    (19, 'MH19', NULL, 1, 2), -- Maintenance
+    (20, 'MH20', 'jack.young@school.com', 1, 1),
+
+    -- Science Wing Lockers (15 total)
+    (21, 'SW01', 'nova.walker@school.com', 2, 1),
+    (22, 'SW02', 'leo.king@school.com', 2, 1),
+    (23, 'SW03', 'hazel.wright@school.com', 2, 1),
+    (24, 'SW04', 'felix.lopez@school.com', 2, 1),
+    (25, 'SW05', 'aurora.hill@school.com', 2, 1),
+    (26, 'SW06', 'finn.scott@school.com', 2, 1),
+    (27, 'SW07', 'ruby.green@school.com', 2, 1),
+    (28, 'SW08', 'atlas.adams@school.com', 2, 1),
+    (29, 'SW09', 'cora.baker@school.com', 2, 1),
+    (30, 'SW10', 'axel.carter@school.com', 2, 1),
+    (31, 'SW11', NULL, 2, 0), -- Available
+    (32, 'SW12', 'hugo.price@school.com', 2, 1),
+    (33, 'SW13', 'eden.ross@school.com', 2, 1),
+    (34, 'SW14', 'owen.cole@school.com', 2, 1),
+    (35, 'SW15', 'ivy.ward@school.com', 2, 1),
+
+    -- Library Lockers (15 total)
+    (36, 'LB01', 'max.fox@school.com', 3, 1),
+    (37, 'LB02', 'eve.gray@school.com', 3, 1),
+    (38, 'LB03', 'leo.hunt@school.com', 3, 1),
+    (39, 'LB04', 'mae.west@school.com', 3, 1),
+    (40, 'LB05', 'ray.nash@school.com', 3, 1),
+    (41, 'LB06', 'joy.day@school.com', 3, 1),
+    (42, 'LB07', NULL, 3, 0), -- Available
+    (43, 'LB08', 'ana.boyd@school.com', 3, 1),
+    (44, 'LB09', 'rex.page@school.com', 3, 1),
+    (45, 'LB10', 'zoe.reid@school.com', 3, 1),
+    (46, 'LB11', NULL, 3, 0), -- Available
+    (47, 'LB12', 'ian.hart@school.com', 3, 1),
+    (48, 'LB13', 'amy.lane@school.com', 3, 1),
+    (49, 'LB14', 'ben.hale@school.com', 3, 1),
+    (50, 'LB15', 'sky.moss@school.com', 3, 1),
+
+    -- Gym Lockers (15 total)
+    (51, 'GM01', 'mae.bond@school.com', 4, 1),
+    (52, 'GM02', 'sam.wade@school.com', 4, 1),
+    (53, 'GM03', 'ava.tate@school.com', 4, 1),
+    (54, 'GM04', NULL, 4, 0), -- Available
+    (55, 'GM05', NULL, 4, 2), -- Maintenance
+    (56, 'GM06', 'isla.morris@school.com', 4, 1),
+    (57, 'GM07', 'kai.shaw@school.com', 4, 1),
+    (58, 'GM08', 'tom.kent@school.com', 4, 1),
+    (59, 'GM09', 'oscar.chen@school.com', 4, 1),
+    (60, 'GM10', 'lily.zhang@school.com', 4, 1),
+    (61, 'GM11', 'gabriel.cooper@school.com', 4, 1),
+    (62, 'GM12', 'sofia.patel@school.com', 4, 1),
+    (63, 'GM13', 'lucas.kim@school.com', 4, 1),
+    (64, 'GM14', 'maya.singh@school.com', 4, 1),
+    (65, 'GM15', 'ethan.anderson@school.com', 4, 1)
+) AS L(ID, Number, Email, LocationID, Status)
+LEFT JOIN #TempStudents TS ON L.Email = TS.Email;
+
+SET IDENTITY_INSERT Lockers OFF;
+
+-- Clean up
+DROP TABLE #TempStudents;
