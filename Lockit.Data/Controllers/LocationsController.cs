@@ -56,10 +56,11 @@ public class LocationsController : Controller
 	}
 
 	[HttpDelete("{locationId}")]
-	public async Task<ActionResult<Location>> DeleteLocation(int locationId)
+	public async Task<IActionResult> DeleteLocation(int locationId)
 	{
 		var locationToDelete = await _locationRepository.GetLocationByIdAsync(locationId);
 		if (locationToDelete == null) return NotFound($"Location with id = {locationId} was not found!");
-		return await _locationRepository.DeleteLocationAsync(locationId);
+		await _locationRepository.DeleteLocationAsync(locationId);
+		return Ok(locationToDelete);
 	}
 }

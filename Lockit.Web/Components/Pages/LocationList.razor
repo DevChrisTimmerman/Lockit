@@ -1,5 +1,4 @@
 ﻿@page "/lists/locations"
-@using Lockit.Web.Services
 
 <MudTable Style="position: relative" Items="@locations" Filter="new Func<Location, bool>(SearchFunc)"  Height="calc(80vh - (var(--mud-appbar-height) + 60px))" Loading="!_dataLoaded" Virtualize Hover FixedHeader>
 	<ToolBarContent>
@@ -39,12 +38,25 @@
 	</LoadingContent>
 </MudTable>
 
+@* =================== Message boxes =================== *@
+
+<MudMessageBox @ref="_deleteMsgBox" Title="Warning" CancelText="Cancel">
+	<MessageContent>
+		Are you sure you want to <b>Delete</b> this location? This cannot be undone.
+	</MessageContent>
+	<YesButton>
+		<MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever">Delete!</MudButton>
+	</YesButton>
+</MudMessageBox>
+
 @code {
 	[Inject]
 	public LocationService LocationService { get; set; }
 	private List<Location> locations = new List<Location>();
 	private string _searchString = string.Empty;
 	private bool _dataLoaded = false;
+
+	private MudMessageBox _deleteMsgBox = new();
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -61,12 +73,18 @@
 
 	private void EditLocation(Location location)
 	{
-		
+
 	}
 
-	private void DeleteLocation(Location location)
+	private async Task DeleteLocation(Location location)
 	{
-		
+		bool? result = await _deleteMsgBox.ShowAsync();
+		if (result == true)
+		{
+			await LocationService.DeleteLocationAsync(location.ID);
+			locations.Remove(location);
+			StateHasChanged();
+		}
 	}
 
 }

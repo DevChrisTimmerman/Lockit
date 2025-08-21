@@ -1,77 +1,114 @@
 ﻿@page "/register"
-
-@if (registrationDone == false)
-{
-	<MudText Typo="Typo.h3">Inleveren lockersleutels + locker reserveren schooljaar 2025 - 2026</MudText>
-
-	<MudText Class="ma-3">
-		<b>Voor de nieuwe leerlingen:</b> 
-		<br/> Indien je in het formulier hieronder aanduidt dat je een nieuwe leerling bent, word je meteen naar de pagina doorgestuurd waar je kan aanvinken of je een locker wenst. Tot slot hoef je enkel nog op de knop 'verzenden' te klikken. Je locker is dan gereserveerd voor het schooljaar 2025-2026.
-		<br/>
-		<br/>
-		<b>Voor de leerlingen die een locker huren in schooljaar 2024-2025: </b> 
-		<br/> Je geeft je beide lockersleutels klassikaal af op het leerlingensecretariaat in de laatste dagen voor de proefwerken. Ongeacht je keuze om de huur van de locker al dan niet te verlengen, verwachten we van jou de 2 lockersleutels.
-		Sleutels inleveren kan op volgende momenten:
-		<br/>
-		<br/>
-		<ul class="pl-10">
-			<li>eerstejaars op vrijdag 13 juni</li>
-			<li>tweedejaars op woensdag 11 en donderdagvoormiddag 12 juni</li>
-			<li>derdejaars op dinsdagvoormiddag 10 juni</li>
-			<li>vierdejaars op woensdag 4 juni</li>
-			<li>vijfdejaars op donderdag 5 juni</li>
-			<li>zesdejaars op dinsdagnamiddag 3 juni en donderdagvoormiddag 5 juni</li>
-		</ul>
-		<br /><b>BELANGRIJK! </b> Denk eraan om het Google formulier hieronder in te vullen en te verzenden!
-		<br/>
-		<br /><b>Voor de leerlingen die dit schooljaar een locker huren en er volgend jaar geen meer wensen:</b><br />
-		In het formulier hieronder duid je aan dat je het huurcontract van de locker wil stopzetten.
-		<br/>
-		<br/><b >Voor de leerlingen die dit schooljaar geen locker huren en er volgend jaar wel één wensen:</b><br/>
-		In het formulier hieronder noteer je bij lockernummer 'geen locker' en bij inleveren lockers 'niet van toepassing'.
-		<br />
-		<br /><b>Voor de leerlingen die dit schooljaar een locker huren en het contract willen verlengen:</b><br />
-		In het formulier hieronder duid je aan dat je het huurcontract van de locker wil verlengen.
-		<br />
-		<br/><b >Voor de leerlingen die dit schooljaar 1 of 2 lockersleutels verloren:</b><br/>
-		In het formulier hieronder duid je aan dat je 1 of 2 sleutels verloor. De onkosten van ongeveer 15 euro komen op de schoolrekening.
-		<br/>
-		<br /><b>Hoeveel bedraagt de huur?</b><br />
-		De huurprijs van de lockers bedraagt 20 euro per schooljaar.
-		<br/>
-		<br /><b>Ter herinnering:</b><br />
-		Moet iedereen het formulier invullen?
-		Neen, je vult het enkel in indien:
-		- je in schooljaar 2024-2025 een locker huurde
-		- je in schooljaar 2024-2025 geen locker huurde maar wel een locker wil huren in schooljaar 2025-2026
-		<br /><br />
-		<b>Controleer na het invullen van onderstaand document zeker je mailbox. Indien alles vlot verlopen is, ontvang je een bevestiging via mail. Geen mail gekregen? Vul het formulier dan opnieuw in.</b>
-	</MudText>
-
-
-	<EditForm Model="@locker" OnValidSubmit="OnValidSubmit">
-		<DataAnnotationsValidator />
-		<MudGrid Justify="Justify.Center">
-			<MudItem Class="ma-5">
-				<MudTextField T="string" Variant="Variant.Outlined" Style="width: 400px" Label="Email" Required/>
-				<MudTextField T="string" Variant="Variant.Outlined" Style="width: 400px" Label="Achternaam" @bind-Value="@locker.Student.LastName" Required/>
-				<MudTextField T="string" Variant="Variant.Outlined" Style="width: 400px" Label="Voornaam" @bind-Value="@locker.Student.Name" Required />
-				<MudText>Duid aan of je een nieuwe leerling bent</MudText>
-				<MudRadioGroup T="bool?" Required @bind-Value="_isNewStudent">
-					<MudRadio T="bool?" Value="true" Color="Color.Primary">Ja</MudRadio>
-					<MudRadio T="bool?" Value="false" Color="Color.Secondary">Nee</MudRadio>
-				</MudRadioGroup>
-				<div class="d-flex justify-end mt-5">
-					<MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.Send" ButtonType="ButtonType.Submit">Register</MudButton>
-				</div>
-				</MudItem>
-		</MudGrid>
-	</EditForm>
-}
-else
-{
-	<MudAlert Severity="Severity.Success">Registration successful!</MudAlert>
-}
+@* Rebuild from scratch *@
+<MudTabs>
+	<MudTabPanel Text="Huidige systeem" Icon="@Icons.Material.TwoTone.Circle" OnClick="Reset">
+		@if (_registrationDone == false)
+		{
+			<MudText Typo="Typo.h3">Inleveren lockersleutels + locker reserveren schooljaar 2025 - 2026</MudText>
+			<MudText Class="ma-3">
+				<b>Voor de nieuwe leerlingen:</b> 
+				<br/> Indien je in het formulier hieronder aanduidt dat je een nieuwe leerling bent, word je meteen naar de pagina doorgestuurd waar je kan aanvinken of je een locker wenst. Tot slot hoef je enkel nog op de knop 'verzenden' te klikken. Je locker is dan gereserveerd voor het schooljaar 2025-2026.
+				<br/>
+				<br/>
+				<b>Voor de leerlingen die een locker huren in schooljaar 2024-2025: </b> 
+				<br/> Je geeft je beide lockersleutels klassikaal af op het leerlingensecretariaat in de laatste dagen voor de proefwerken. Ongeacht je keuze om de huur van de locker al dan niet te verlengen, verwachten we van jou de 2 lockersleutels.
+				Sleutels inleveren kan op volgende momenten:
+				<br/>
+				<br/>
+				<ul class="pl-10">
+					<li>eerstejaars op vrijdag 13 juni</li>
+					<li>tweedejaars op woensdag 11 en donderdagvoormiddag 12 juni</li>
+					<li>derdejaars op dinsdagvoormiddag 10 juni</li>
+					<li>vierdejaars op woensdag 4 juni</li>
+					<li>vijfdejaars op donderdag 5 juni</li>
+					<li>zesdejaars op dinsdagnamiddag 3 juni en donderdagvoormiddag 5 juni</li>
+				</ul>
+				<br /><b>BELANGRIJK! </b> Denk eraan om het Google formulier hieronder in te vullen en te verzenden!
+				<br/>
+				<br /><b>Voor de leerlingen die dit schooljaar een locker huren en er volgend jaar geen meer wensen:</b><br />
+				In het formulier hieronder duid je aan dat je het huurcontract van de locker wil stopzetten.
+				<br/>
+				<br/><b >Voor de leerlingen die dit schooljaar geen locker huren en er volgend jaar wel één wensen:</b><br/>
+				In het formulier hieronder noteer je bij lockernummer 'geen locker' en bij inleveren lockers 'niet van toepassing'.
+				<br />
+				<br /><b>Voor de leerlingen die dit schooljaar een locker huren en het contract willen verlengen:</b><br />
+				In het formulier hieronder duid je aan dat je het huurcontract van de locker wil verlengen.
+				<br />
+				<br/><b >Voor de leerlingen die dit schooljaar 1 of 2 lockersleutels verloren:</b><br/>
+				In het formulier hieronder duid je aan dat je 1 of 2 sleutels verloor. De onkosten van ongeveer 15 euro komen op de schoolrekening.
+				<br/>
+				<br /><b>Hoeveel bedraagt de huur?</b><br />
+				De huurprijs van de lockers bedraagt 20 euro per schooljaar.
+				<br/>
+				<br /><b>Ter herinnering:</b><br />
+				Moet iedereen het formulier invullen?
+				Neen, je vult het enkel in indien:
+				- je in schooljaar 2024-2025 een locker huurde
+				- je in schooljaar 2024-2025 geen locker huurde maar wel een locker wil huren in schooljaar 2025-2026
+				<br /><br />
+				<b>Controleer na het invullen van onderstaand document zeker je mailbox. Indien alles vlot verlopen is, ontvang je een bevestiging via mail. Geen mail gekregen? Vul het formulier dan opnieuw in.</b>
+			</MudText>
+			<EditForm Model="@locker" OnValidSubmit="OnValidSubmit">
+				<DataAnnotationsValidator />
+				<MudGrid Justify="Justify.Center">
+					<MudItem Class="ma-5">
+						<MudTextField T="string" Variant="Variant.Outlined" Style="width: 400px" Label="Email" Required/>
+						<MudTextField T="string" Variant="Variant.Outlined" Style="width: 400px" Label="Achternaam" @bind-Value="@locker.Student.LastName" Required/>
+						<MudTextField T="string" Variant="Variant.Outlined" Style="width: 400px" Label="Voornaam" @bind-Value="@locker.Student.Name" Required />
+						<MudText>Duid aan of je een nieuwe leerling bent</MudText>
+						<MudRadioGroup T="bool?" Required @bind-Value="_isNewStudent">
+							<MudRadio T="bool?" Value="true" Color="Color.Primary">Ja</MudRadio>
+							<MudRadio T="bool?" Value="false" Color="Color.Secondary">Nee</MudRadio>
+						</MudRadioGroup>
+						<br /> Wens je komend schooljaar weer een locker te huren?
+						<br/>
+						<MudRadioGroup T="bool?" Required RequiredError="Verplicht antwoorden!" @bind-Value="_wantsRerentLocker">
+							<MudRadio T="bool?" Value="true" Color="Color.Primary">Ja</MudRadio>
+							<MudRadio T="bool?" Value="false" Color="Color.Secondary">Nee</MudRadio>
+						</MudRadioGroup>
+						<div class="d-flex justify-end mt-5">
+							<MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.Send" ButtonType="ButtonType.Submit">Register</MudButton>
+						</div>
+					</MudItem>
+				</MudGrid>
+			</EditForm>
+		}
+		else
+		{
+			<MudAlert Severity="Severity.Success">Registration successful!</MudAlert>
+		}
+	</MudTabPanel>
+	<MudTabPanel Text="Potentieel" Icon="@Icons.Material.TwoTone.QueuePlayNext" OnClick="Reset">
+		@if (_registrationDone == false)
+		{
+				<MudForm @ref="_form" @bind-IsValid="@success" @bind-Errors="@errors">
+					<MudText>Naam: <b>Jan Jansens</b><br/>
+						<MudDivider Light/>
+					<MudText Typo="Typo.h6">Schooljaar: <b>2024 - 2025</b></MudText>
+						Klas: <b>3WEWA</b>
+						<br/> Lockernummer: <b>B123</b>
+						<br/> Je word verwacht om je beide lockersleutels klassikaal af te geven op het leerlingensecretariaat in de laatste dagen voor de proefwerken. verwachten we van jou de 2 lockersleutels.
+						<br/> Jou inlevermoment is op: <b> dinsdagvoormiddag 10 juni</b>
+						<br/>
+						<br/>
+					<MudText Typo="Typo.h6">Schooljaar: <b>2025 - 2026</b></MudText>
+						Wens je komend schooljaar weer een locker te huren?
+						<MudRadioGroup T="bool?" Required RequiredError="Account type is required!" @bind-Value="_wantsRerentLocker">
+							<MudRadio T="bool?" Value="true" Color="Color.Primary">Ja</MudRadio>
+							<MudRadio T="bool?" Value="false" Color="Color.Secondary">Nee</MudRadio>
+						</MudRadioGroup>
+						<div class="d-flex justify-end mt-5">
+							<MudButton Variant="Variant.Filled" Color="Color.Primary" EndIcon="@Icons.Material.Filled.Send" OnClick="@OnValidateNewSystem">Register</MudButton>
+						</div>
+					</MudText>
+			</MudForm>
+		}
+		else
+		{
+			<MudAlert Severity="Severity.Success">Registration successful!</MudAlert>
+		}
+	</MudTabPanel>
+</MudTabs>
 
 
 @code {
@@ -80,8 +117,13 @@ else
 	private Locker locker = new Locker();
 
 	private bool? _isNewStudent;
+	private bool? _wantsRerentLocker;
 
-	private bool registrationDone = false;
+	private bool _registrationDone = false;
+
+	private MudForm _form;
+	bool success;
+	string[] errors = { };
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -93,8 +135,17 @@ else
 		bool success = true; // await LockerService.RegisterLocker(locker);
 		if (success)
 		{
-			registrationDone = true;
+			_registrationDone = true;
 			InitializeEmptyLocker();
+		}
+	}
+
+	private async Task OnValidateNewSystem()
+	{
+		await _form.Validate();
+		if (errors.Length == 0)
+		{
+			_registrationDone = true;
 		}
 	}
 
@@ -102,5 +153,11 @@ else
 	{
 		locker = new Locker();
 		locker.Student = new Student();
+	}
+
+	private void Reset()
+	{
+		_registrationDone = false;
+		_wantsRerentLocker = null;
 	}
 }

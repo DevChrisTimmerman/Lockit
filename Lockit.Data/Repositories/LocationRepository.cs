@@ -40,7 +40,7 @@ public class LocationRepository : ILocationRepository
 	public async Task<Location> DeleteLocationAsync(int locationId)
 	{
 		var location = await _context.Locations.FindAsync(locationId);
-		if (location == null)
+		if (location != null)
 		{
 			_context.Locations.Remove(location);
 			await _context.SaveChangesAsync();
