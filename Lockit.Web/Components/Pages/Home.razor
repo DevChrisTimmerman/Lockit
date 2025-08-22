@@ -16,7 +16,7 @@
 	<MudItem>
 		<MudChart ChartType="ChartType.Donut" Width="300px" Height="300px" @bind-SelectedIndex="_index" InputData="@_data" InputLabels="@_labels">
 			<CustomGraphics>
-				<text class="donut-inner-text" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="black" font-family="Helvetica" font-size="50"> @(_data[1] / @_data.Sum() * 100)%</text>
+				<text class="donut-inner-text" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="black" font-family="Helvetica" font-size="50"> @Math.Round(_data[1] / @_data.Sum() * 100)%</text>
 			</CustomGraphics>
 		</MudChart>
 	</MudItem>

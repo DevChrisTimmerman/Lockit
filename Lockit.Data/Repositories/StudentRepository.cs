@@ -20,6 +20,6 @@ public class StudentRepository : IStudentRepository
 
 	public async Task<Student?> GetStudentByIdAsync(int studentId)
 	{
-		return await _context.Students.FindAsync(studentId);
+		return await _context.Students.FirstOrDefaultAsync(u => u.ID == studentId);
 	}
 }

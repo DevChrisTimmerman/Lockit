@@ -1,7 +1,7 @@
-﻿@page "/setup"
+﻿@page "/create-lockers"
 
 
-@if (AppStateService.IsLocationSetupComplete)
+@* @if (AppStateService.IsLocationSetupComplete)
 {
 	<MudAlert Severity="Severity.Info">
 		<MudStack Row AlignItems="AlignItems.Center" Spacing="1">
@@ -9,7 +9,7 @@
 		</MudStack>
 	</MudAlert>
 	return;
-}
+} *@
 
 <MudStepper ShowResetButton OnPreviewInteraction="OnPreviewInteraction">
 	<ChildContent>
@@ -18,7 +18,7 @@
 			@foreach (var loc in _locations)
 			{
 				<MudPaper Elevation="3">
-					<MudGrid Justify="Justify.FlexStart" Spacing="4" Class="ma-5 pa-3">
+					<MudGrid Justify="Justify.FlexStart" Spacing="4" Class="ma-4">
 						<MudItem xs="1">
 							<MudTooltip ShowOnFocus Arrow Placement="Placement.Top" Text="Leave empty if no Prefix is wanted" Color="Color.Primary">
 								<MudTextField Variant="Variant.Outlined" T="string" Label="Prefix" @bind-Value="@loc.Prefix"/>
@@ -47,20 +47,27 @@
 				var loc = _locations[i];
 				int index = i;
 				<MudPaper Elevation="3">
-					<MudGrid Justify="Justify.FlexStart" Spacing="4" Class="ma-5 pa-3">
-						<MudItem xs="3">
-							<MudTextField Label="Name" ReadOnly @bind-Value="@loc.Name" Variant="Variant.Filled" />
-						</MudItem>
-						<MudItem xs="3">
-							<MudTextField Label="Prefix" ReadOnly @bind-Value="@loc.Prefix" Variant="Variant.Filled" />
-						</MudItem>
-						<MudItem xs="2">
-							<MudTextField Variant="Variant.Outlined" Required T="int?" Label="Total lockers" @bind-Value="_locationsTotalCounts[index]" />
-						</MudItem>
-						<MudItem xs="2">
-							<MudTextField Variant="Variant.Outlined" Required T="int?" Label="Lockers per column" @bind-Value="_locationsTotalPerColumnCounts[index]" />
-						</MudItem>
-					</MudGrid>
+					<MudStack Class="ma-4 pa-4" Row AlignItems="AlignItems.Center">
+						<MudGrid Justify="Justify.FlexStart" Spacing="4" >
+							<MudItem xs="1">
+								<MudTextField Label="Prefix" ReadOnly @bind-Value="@loc.Prefix" Variant="Variant.Filled"/>
+							</MudItem>
+							<MudItem xs="4">
+								<MudTextField Label="Name" ReadOnly @bind-Value="@loc.Name" Variant="Variant.Filled"/>
+							</MudItem>
+							<MudSpacer/>
+							<MudItem xs="1">
+								<MudIcon Icon="@Icons.Material.TwoTone.ArrowRightAlt"/>
+							</MudItem>
+							<MudSpacer/>
+							<MudItem xs="2">
+								<MudTextField Variant="Variant.Outlined" Required T="int" Label="Total lockers" @bind-Value="@loc.LockerCount"/>
+							</MudItem>
+							<MudItem xs="2">
+								<MudTextField Variant="Variant.Outlined" Required T="int" Label="Lockers per column" @bind-Value="@loc.LockersPerColumn"/>
+							</MudItem>
+						</MudGrid>
+					</MudStack>
 				</MudPaper>
 			}
 		</MudStep>
@@ -84,8 +91,18 @@
 										<MudDivider Vertical/>
 									</MudItem>
 									<MudItem>
-										<MudText>Total: @_locationsTotalCounts[index] </MudText>
-										<MudText>Per Column: @_locationsTotalPerColumnCounts[index] </MudText>
+										<MudText>Total: @loc.LockerCount </MudText>
+										<MudText>Per Column: @loc.LockersPerColumn </MudText>
+									</MudItem>
+									<MudItem>
+										<MudStack Row Justify="Justify.Center">
+											@foreach (var locker in _previewLocationLockers[index])
+											{
+												<MudPaper>
+													@locker.Number
+												</MudPaper>
+											}
+										</MudStack>
 									</MudItem>
 								</MudGrid>
 							</MudItem>
@@ -102,9 +119,8 @@
 					@if (_isDBrequestProcessed)
 					{
 						<MudStack Row AlignItems="AlignItems.Center" Spacing="1">
-						<MudText Class="ma-20">Lockit setup complete! <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" /></MudText>
+						<MudText Class="ma-20">New lockers added! <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" /></MudText>
 						</MudStack>
-						AppStateService.MarkLocationSetupComplete();
 					}
 					else
 					{
@@ -132,10 +148,12 @@
 	[Inject]
 	public LocationService LocationService { get; set; }
 	[Inject]
+	public LockerService LockerService { get; set; }
+	[Inject]
 	public AppStateService AppStateService { get; set; }
 	private List<Location> _locations = new List<Location>();
-	private List<int?> _locationsTotalCounts = new List<int?>();
-	private List<int?> _locationsTotalPerColumnCounts = new List<int?>();
+
+	private List<List<Locker>> _previewLocationLockers = new List<List<Locker>>();
 
 	private bool _locationsStepHasErrors = false;
 	private bool _locationsAmountsHasError = false;
@@ -152,15 +170,11 @@
 	private void AddLocation()
 	{
 		_locations.Add(new Location());
-		_locationsTotalCounts.Add(null);
-		_locationsTotalPerColumnCounts.Add(null);
 	}
 
 	private void RemoveLocation()
 	{
 		_locations.RemoveAt(_locations.Count - 1);
-		_locationsTotalCounts.RemoveAt(_locationsTotalCounts.Count - 1);
-		_locationsTotalPerColumnCounts.RemoveAt(_locationsTotalPerColumnCounts.Count - 1);
 	}
 
 	private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
@@ -177,11 +191,17 @@
 				break;
 			case StepAction.Reset:
 				// occurs when clicking the reset button
+				ResetPreviewLocationLocker();
 				break;
 			case StepAction.Skip:
 				// occurs when clicking the skip button
 				break;
 		}
+	}
+
+	private void ResetPreviewLocationLocker()
+	{
+		_previewLocationLockers.Clear();
 	}
 
 	private async Task ControlStepCompletion(StepperInteractionEventArgs arg)
@@ -195,11 +215,16 @@
 				}
 				break;
 			case 1:
-				if (ValidateLockerAmounts() == false)
+				if (ValidateLockerAmounts())
+				{
+					SetupLockerLocationPreviewList();
+				}
+				else
 				{
 					await DialogService.ShowMessageBox("Error", "Please enter valid locker counts for all locations, \r\n The total locker counter per location should be divisible by column count");
 					arg.Cancel = true;
 				}
+
 				break;
 			case 2:
 				_completed = true;
@@ -226,45 +251,45 @@
 
 	private bool ValidateLockerAmounts()
 	{
-		//Check for nulls
-		foreach (var count in _locationsTotalCounts)
+		foreach (var loc in _locations)
 		{
-			if (count == null)
+			if (loc.LockerCount == 0 || loc.LockersPerColumn == 0)
 			{
 				_locationsAmountsHasError = true;
 				return false;
 			}
-		}
 
-		//Check for nulls
-		foreach (var count in _locationsTotalPerColumnCounts)
-		{
-			if (count == null)
+			//make sure they are divisable
+			if (loc.LockerCount % loc.LockersPerColumn != 0)
 			{
 				_locationsAmountsHasError = true;
 				return false;
 			}
-		}
-
-		//Check if total count is divisible by column count
-		for (var i = 0; i < _locationsTotalCounts.Count; i++)
-		{
-			var count = _locationsTotalCounts[i];
-			if (count % _locationsTotalPerColumnCounts[i] != 0)
-			{
-				return false;
-			}
-		}
-
-		//Set the lockers per column for each location
-		for (var i = 0; i < _locations.Count; i++)
-		{
-			var loc = _locations[i];
-			loc.LockersPerColumn = (int)_locationsTotalPerColumnCounts[i];
 		}
 
 		_locationsAmountsHasError = false;
 		return true;
+	}
+
+	private void SetupLockerLocationPreviewList()
+	{
+		//Set the lockers per column for each location
+		for (var i = 0; i < _locations.Count; i++)
+		{
+			_previewLocationLockers.Add(new List<Locker>());
+			for (int j = 0; j < _locations[i].LockerCount; j++)
+			{
+				Locker locker = new Locker
+				{
+					Number = _locations[i].Prefix + (j + 1).ToString("D3"),
+					LocationID = _locations[i].ID,
+					StudentID = null,
+					Student = null,
+					Status = Enums.LockerStatus.Available
+				};
+				_previewLocationLockers[i].Add(locker);
+			}
+		}
 	}
 
 	private async Task<bool> FinalizeSetup()
@@ -273,7 +298,16 @@
 		{
 			await LocationService.AddLocationAsync(loc);
 		}
-		//wait 3 seconds
+
+		foreach (List<Locker> locationLockers in _previewLocationLockers)
+		{
+			foreach (Locker locker in locationLockers)
+			{
+				await LockerService.AddLockerAsync(locker);
+			}
+		}
+
+		//wait 3 seconds so the animation can be seen :)
 		await Task.Delay(3000);
 		_isDBrequestProcessed = true;
 		return true;

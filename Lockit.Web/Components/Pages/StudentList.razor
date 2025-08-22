@@ -12,7 +12,7 @@
 		<MudTh><MudTableSortLabel SortBy="new Func<Student, object>(x => x.LastName)">LastName</MudTableSortLabel></MudTh>
 		<MudTh><MudTableSortLabel SortBy="new Func<Student, object>(x => x.Class)">Class</MudTableSortLabel></MudTh>
 		<MudTh><MudTableSortLabel SortBy="new Func<Student, object>(x => x.Email)">Email</MudTableSortLabel></MudTh>
-		<MudTh Style="text-align: center"><MudTableSortLabel SortBy="new Func<Student, object>(x => _studentsDictionary[x])">Has Locker</MudTableSortLabel></MudTh>
+		<MudTh Style="text-align: center"><MudTableSortLabel SortBy="new Func<Student, object>(x => HasLocker(x.ID))">Has Locker</MudTableSortLabel></MudTh>
 	</HeaderContent>
 	<RowTemplate>
 		<MudTd>@context.ID</MudTd>
@@ -21,7 +21,7 @@
 		<MudTd>@context.Class</MudTd>
 		<MudTd>@context.Email</MudTd>
 		<MudTd Style="text-align: center">
-			@if (_studentsDictionary[context])
+			@if (HasLocker(context.ID))
 			{
 				<MudIcon Icon="@Icons.Material.Filled.CheckBox" Color="@Color.Primary"/>
 			}
@@ -51,17 +51,14 @@
 	[Inject]
 	public LockerService LockerService { get; set; }
 	private List<Student> _students = new List<Student>();
-	private Dictionary<Student, bool> _studentsDictionary = new Dictionary<Student, bool>();
+	private List<Locker> _lockers = new List<Locker>();
 	private bool _dataLoaded = false;
 	private string _searchString = string.Empty;
 
 	protected override async Task OnInitializedAsync()
 	{
 		_students = await StudentService.GetAllStudentsAsync();
-		foreach (var student in _students)
-		{
-			_studentsDictionary[student] = await HasLocker(student.ID);
-		}
+		_lockers = await LockerService.GetAllLockersAsync();
 		_dataLoaded = true;
 	}
 
@@ -75,10 +72,9 @@
 						student.Email.Contains(_searchString, StringComparison.OrdinalIgnoreCase);
 	}
 
-	private async Task<bool> HasLocker(int studentID)
+	private bool HasLocker(int studentID)
 	{
-		Locker? result = await LockerService.GetLockerByUserIdAsync(studentID);
-		return result != null;
+		return _lockers.FirstOrDefault(l => l.StudentID == studentID) != null;
 	}
 
 }
