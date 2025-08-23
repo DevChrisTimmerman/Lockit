@@ -20,7 +20,8 @@ public class StudentService
 			case HttpStatusCode.OK:
 				return await response.Content.ReadFromJsonAsync<List<Student>>();
 			default:
-				throw new Exception("An error occurred while fetching all students.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while fetching all students. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 
@@ -32,7 +33,8 @@ public class StudentService
 			case HttpStatusCode.OK:
 				return await response.Content.ReadFromJsonAsync<Student>();
 			default:
-				throw new Exception("An error occurred while fetching the student.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while fetching the student. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 }

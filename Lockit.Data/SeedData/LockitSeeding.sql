@@ -132,38 +132,38 @@ FROM (
     (35, 'SW15', 'ivy.ward@school.com', 2, 1),
 
     -- Library Lockers (15 total)
-    (36, 'LB01', 'max.fox@school.com', 3, 1),
-    (37, 'LB02', 'eve.gray@school.com', 3, 1),
-    (38, 'LB03', 'leo.hunt@school.com', 3, 1),
-    (39, 'LB04', 'mae.west@school.com', 3, 1),
-    (40, 'LB05', 'ray.nash@school.com', 3, 1),
-    (41, 'LB06', 'joy.day@school.com', 3, 1),
-    (42, 'LB07', NULL, 3, 0), -- Available
-    (43, 'LB08', 'ana.boyd@school.com', 3, 1),
-    (44, 'LB09', 'rex.page@school.com', 3, 1),
-    (45, 'LB10', 'zoe.reid@school.com', 3, 1),
-    (46, 'LB11', NULL, 3, 0), -- Available
-    (47, 'LB12', 'ian.hart@school.com', 3, 1),
-    (48, 'LB13', 'amy.lane@school.com', 3, 1),
-    (49, 'LB14', 'ben.hale@school.com', 3, 1),
-    (50, 'LB15', 'sky.moss@school.com', 3, 1),
+    (36, 'Lib01', 'max.fox@school.com', 3, 1),
+    (37, 'Lib02', 'eve.gray@school.com', 3, 1),
+    (38, 'Lib03', 'leo.hunt@school.com', 3, 1),
+    (39, 'Lib04', 'mae.west@school.com', 3, 1),
+    (40, 'Lib05', 'ray.nash@school.com', 3, 1),
+    (41, 'Lib06', 'joy.day@school.com', 3, 1),
+    (42, 'Lib07', NULL, 3, 0), -- Available
+    (43, 'Lib08', 'ana.boyd@school.com', 3, 1),
+    (44, 'Lib09', 'rex.page@school.com', 3, 1),
+    (45, 'Lib10', 'zoe.reid@school.com', 3, 1),
+    (46, 'Lib11', NULL, 3, 0), -- Available
+    (47, 'Lib12', 'ian.hart@school.com', 3, 1),
+    (48, 'Lib13', 'amy.lane@school.com', 3, 1),
+    (49, 'Lib14', 'ben.hale@school.com', 3, 1),
+    (50, 'Lib15', 'sky.moss@school.com', 3, 1),
 
     -- Gym Lockers (15 total)
-    (51, 'GM01', 'mae.bond@school.com', 4, 1),
-    (52, 'GM02', 'sam.wade@school.com', 4, 1),
-    (53, 'GM03', 'ava.tate@school.com', 4, 1),
-    (54, 'GM04', NULL, 4, 0), -- Available
-    (55, 'GM05', NULL, 4, 2), -- Maintenance
-    (56, 'GM06', 'isla.morris@school.com', 4, 1),
-    (57, 'GM07', 'kai.shaw@school.com', 4, 1),
-    (58, 'GM08', 'tom.kent@school.com', 4, 1),
-    (59, 'GM09', 'oscar.chen@school.com', 4, 1),
-    (60, 'GM10', 'lily.zhang@school.com', 4, 1),
-    (61, 'GM11', 'gabriel.cooper@school.com', 4, 1),
-    (62, 'GM12', 'sofia.patel@school.com', 4, 1),
-    (63, 'GM13', 'lucas.kim@school.com', 4, 1),
-    (64, 'GM14', 'maya.singh@school.com', 4, 1),
-    (65, 'GM15', 'ethan.anderson@school.com', 4, 1)
+    (51, 'G01', 'mae.bond@school.com', 4, 1),
+    (52, 'G02', 'sam.wade@school.com', 4, 1),
+    (53, 'G03', 'ava.tate@school.com', 4, 1),
+    (54, 'G04', NULL, 4, 0), -- Available
+    (55, 'G05', NULL, 4, 2), -- Maintenance
+    (56, 'G06', 'isla.morris@school.com', 4, 1),
+    (57, 'G07', 'kai.shaw@school.com', 4, 1),
+    (58, 'G08', 'tom.kent@school.com', 4, 1),
+    (59, 'G09', 'oscar.chen@school.com', 4, 1),
+    (60, 'G10', 'lily.zhang@school.com', 4, 1),
+    (61, 'G11', 'gabriel.cooper@school.com', 4, 1),
+    (62, 'G12', 'sofia.patel@school.com', 4, 1),
+    (63, 'G13', 'lucas.kim@school.com', 4, 1),
+    (64, 'G14', 'maya.singh@school.com', 4, 1),
+    (65, 'G15', 'ethan.anderson@school.com', 4, 1)
 ) AS L(ID, Number, Email, LocationID, Status)
 LEFT JOIN #TempStudents TS ON L.Email = TS.Email;
 

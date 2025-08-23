@@ -17,7 +17,7 @@
 		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Student != null ? x.Student.Class : _vacantLockerSort)">Class</MudTableSortLabel></MudTh>
 		<MudTh><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Location.Name)">Location</MudTableSortLabel></MudTh>
 		<MudTh Style="text-align: center"><MudTableSortLabel SortBy="new Func<Locker, object>(x => x.Status)">Status</MudTableSortLabel></MudTh>
-		<MudTh Style="text-align: center"><MudIcon Icon="@Icons.Material.Filled.DashboardCustomize" /></MudTh>
+		<MudTh Style="text-align: center"><MudIcon Icon="@Icons.Material.Filled.DashboardCustomize"/></MudTh>
 	</HeaderContent>
 	<RowTemplate>
 		<MudTd>@context.Number</MudTd>
@@ -32,23 +32,23 @@
 			@switch (context.Status)
 			{
 				case Enums.LockerStatus.Available:
-					<MudIconButton Icon="@Icons.Material.Filled.PersonAddAlt1" Color="Color.Success" OnClick="OnAddStudentClicked"/>
+					<MudIconButton Icon="@Icons.Material.Filled.PersonAddAlt1" Color="Color.Success" OnClick="() => OnAddStudentClicked(context)"/>
 					break;
 				case Enums.LockerStatus.Occupied:
-					<MudIconButton Icon="@Icons.Material.Filled.PersonOff" Color="Color.Warning" OnClick="OnRemoveStudentClicked"/>
+					<MudIconButton Icon="@Icons.Material.Filled.PersonOff" Color="Color.Warning" OnClick="() => OnRemoveStudentClicked(context)" />
 					break;
 				case Enums.LockerStatus.Maintenance:
-					<MudIconButton Disabled Icon="@Icons.Material.Filled.PersonAddAlt1" Color="Color.Warning" OnClick="OnRemoveStudentClicked" />
+					<MudIconButton Disabled Icon="@Icons.Material.Filled.PersonAddAlt1" Color="Color.Warning"/>
 					break;
 			}
 
 			@if (context.Status == Enums.LockerStatus.Maintenance)
 			{
-				<MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Success" OnClick="() => EnableLocker(context)"/>
+				<MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Success" OnClick="() => OnEnableLockerClicked(context)"/>
 			}
 			else
 			{
-				<MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Error" OnClick="() => DisableLocker(context)"/>
+				<MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Error" OnClick="() => OnDisableLockerClicked(context)" />
 			}
 
 		</MudTd>
@@ -72,7 +72,8 @@
 
 <MudMessageBox @ref="_disableMsgBox" Title="Warning" CancelText="Cancel">
 	<MessageContent>
-		Are you sure you want to mark this locker as <b>unavailable?</b>
+		Are you sure you want to mark this locker as <b>unavailable?</b> 
+		<br/>This will remove the student assigned to it.
 	</MessageContent>
 	<YesButton>
 		<MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever">Unavailable</MudButton>
@@ -88,6 +89,15 @@
 	</YesButton>
 </MudMessageBox>
 
+<MudMessageBox @ref="_removeMsgBox" Title="Alert" CancelText="Cancel">
+	<MessageContent>
+		Are you sure you want to remove this student from his locker?
+	</MessageContent>
+	<YesButton>
+		<MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever">Remove!</MudButton>
+	</YesButton>
+</MudMessageBox>
+
 @code
 {
 	[Inject]
@@ -96,6 +106,7 @@
 	private string _searchString = string.Empty;
 	private MudMessageBox _disableMsgBox = new();
 	private MudMessageBox _enableMsgBox = new();
+	private MudMessageBox _removeMsgBox = new();
 	private bool _dataLoaded = false;
 	private string _vacantLockerSort = "zzz";
 
@@ -134,27 +145,40 @@
 		}
 	}
 
-	private void OnAddStudentClicked()
+	private async Task OnAddStudentClicked(Locker locker)
 	{
-
+		// TODO: Logic to add student to locker
 	}
 
-	private void OnRemoveStudentClicked()
+	private async Task OnRemoveStudentClicked(Locker locker)
 	{
-
+		// Logic to remove student from locker
+		bool? result = await _removeMsgBox.ShowAsync();
+		if (result == true)
+		{
+			await RemoveStudent(locker);
+			StateHasChanged();
+		}
 	}
 
-	private async Task DisableLocker(Locker locker)
+	private async Task RemoveStudent(Locker locker)
+	{
+		await LockerService.RemoveStudent(locker);
+		StateHasChanged();
+	}
+
+	private async Task OnDisableLockerClicked(Locker locker)
 	{
 		bool? result = await _disableMsgBox.ShowAsync();
 		if (result == true)
 		{
+			await RemoveStudent(locker);
 			await LockerService.SetLockerStatus(locker, Enums.LockerStatus.Maintenance);
 			StateHasChanged();
 		}
 	}
 
-	private async Task EnableLocker(Locker locker)
+	private async Task OnEnableLockerClicked(Locker locker)
 	{
 		bool? result = await _enableMsgBox.ShowAsync();
 		if (result == true)

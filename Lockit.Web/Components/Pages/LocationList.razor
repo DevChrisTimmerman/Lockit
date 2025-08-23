@@ -11,6 +11,7 @@
 		<MudTh><MudTableSortLabel SortBy="new Func<Location, object>(x =>x.Name)">Location</MudTableSortLabel></MudTh>
 		<MudTh><MudTableSortLabel SortBy="new Func<Location, object>(x =>x.Prefix)">Prefix</MudTableSortLabel></MudTh>
 		<MudTh Style="text-align: center">Locker count</MudTh>
+		<MudTh Style="text-align: center">Lockers/Column</MudTh>
 		<MudTh><MudTableSortLabel SortBy="new Func<Location, object>(x => x.Description)">Description</MudTableSortLabel></MudTh>
 		<MudTh Style="text-align: center"><MudIcon Icon="@Icons.Material.Filled.DashboardCustomize" /></MudTh>
 	</HeaderContent>
@@ -18,7 +19,8 @@
 		<MudTd>@context.ID</MudTd>
 		<MudTd>@context.Name</MudTd>
 		<MudTd>@context.Prefix</MudTd>
-		<MudTd Style="text-align: center">...</MudTd>
+		<MudTd Style="text-align: center">@context.LockerCount</MudTd>
+		<MudTd Style="text-align: center">@context.LockersPerColumn</MudTd>
 		<MudTd>@context.Description</MudTd>
 		<MudTd Style="text-align: center">
 			<MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="() => EditLocation(context)" />
@@ -42,7 +44,7 @@
 
 <MudMessageBox @ref="_deleteMsgBox" Title="Warning" CancelText="Cancel">
 	<MessageContent>
-		Are you sure you want to <b>Delete</b> this location? This cannot be undone.
+		Are you sure you want to <b>Delete</b> this location? This will delete all lockers at this location as well! This cannot be undone.
 	</MessageContent>
 	<YesButton>
 		<MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever">Delete!</MudButton>

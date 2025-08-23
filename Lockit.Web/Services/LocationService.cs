@@ -19,7 +19,8 @@ public class LocationService
 			case HttpStatusCode.OK:
 				return await response.Content.ReadFromJsonAsync<List<Location>>();
 			default:
-				throw new Exception("An error occurred while fetching all locations.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while fetching all locations. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 
@@ -31,7 +32,8 @@ public class LocationService
 			case HttpStatusCode.OK:
 				return await response.Content.ReadFromJsonAsync<Location>();
 			default:
-				throw new Exception("An error occurred while fetching the location.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while fetching the location. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 
@@ -43,7 +45,8 @@ public class LocationService
 			case HttpStatusCode.Created:
 				return await response.Content.ReadFromJsonAsync<Location>();
 			default:
-				throw new Exception("An error occurred while adding a location.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while adding a location. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 
@@ -55,7 +58,8 @@ public class LocationService
 			case HttpStatusCode.OK:
 				return await response.Content.ReadFromJsonAsync<Location>();
 			default:
-				throw new Exception("An error occurred while updating the location.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while updating the location. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 
@@ -67,7 +71,8 @@ public class LocationService
 			case HttpStatusCode.OK:
 				return await response.Content.ReadFromJsonAsync<Location>();
 			default:
-				throw new Exception("An error occurred while deleting the location.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while deleting the location. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 

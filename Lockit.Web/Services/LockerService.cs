@@ -15,7 +15,7 @@ public class LockerService
 	public LockerService(HttpClient httpClient)
 	{
 		_httpClient = httpClient;
-		_jsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
+		_jsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 	}
 
 	public async Task<List<Locker>> GetAllLockersAsync()
@@ -26,7 +26,8 @@ public class LockerService
 			case HttpStatusCode.OK:
 				return await response.Content.ReadFromJsonAsync<List<Locker>>();
 			default:
-				throw new Exception("An error occurred while fetching all lockers.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while fetching all lockers. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 
@@ -38,7 +39,8 @@ public class LockerService
 			case HttpStatusCode.OK:
 				return await response.Content.ReadFromJsonAsync<Locker>();
 			default:
-				throw new Exception("An error occurred while fetching the locker.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while fetching the locker. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 
@@ -50,19 +52,21 @@ public class LockerService
 			case HttpStatusCode.OK:
 				return await response.Content.ReadFromJsonAsync<Locker>();
 			default:
-				throw new Exception("An error occurred while fetching the locker by user ID.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while fetching the locker by user ID. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 
 	public async Task<Locker?> AddLockerAsync(Locker locker)
 	{
-		var response = await _httpClient.PostAsJsonAsync("api/lockers", locker);
+		var response = await _httpClient.PostAsJsonAsync("api/lockers", locker, _jsonSerializerOptions);
 		switch (response.StatusCode)
 		{
 			case HttpStatusCode.Created:
 				return await response.Content.ReadFromJsonAsync<Locker>();
 			default:
-				throw new Exception("An error occurred while adding a locker.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while adding a locker. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 
@@ -74,8 +78,16 @@ public class LockerService
 			case HttpStatusCode.OK:
 				return await response.Content.ReadFromJsonAsync<Locker>();
 			default:
-				throw new Exception("An error occurred while updating the locker.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while updating the locker. Status: {response.StatusCode}, Content: {errorContent}");
 		}
+	}
+
+	public async Task<Locker?> RemoveStudent(Locker locker)
+	{
+		locker.StudentID = null;
+		locker.Student = null;
+		return await UpdateLockerAsync(locker);
 	}
 
 	public async Task<Locker> DeleteLockerAsync(int lockerId)
@@ -86,7 +98,8 @@ public class LockerService
 			case HttpStatusCode.OK:
 				return await response.Content.ReadFromJsonAsync<Locker>();
 			default:
-				throw new Exception("An error occurred while deleting the locker.");
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while deleting the locker. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 

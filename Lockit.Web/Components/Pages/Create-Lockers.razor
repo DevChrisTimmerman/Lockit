@@ -50,21 +50,21 @@
 					<MudStack Class="ma-4 pa-4" Row AlignItems="AlignItems.Center">
 						<MudGrid Justify="Justify.FlexStart" Spacing="4" >
 							<MudItem xs="1">
-								<MudTextField Label="Prefix" ReadOnly @bind-Value="@loc.Prefix" Variant="Variant.Filled"/>
+								<MudTextField Label="Prefix" ReadOnly @bind-Value="@loc.Prefix" Variant="Variant.Filled" />
 							</MudItem>
 							<MudItem xs="4">
 								<MudTextField Label="Name" ReadOnly @bind-Value="@loc.Name" Variant="Variant.Filled"/>
 							</MudItem>
 							<MudSpacer/>
-							<MudItem xs="1">
-								<MudIcon Icon="@Icons.Material.TwoTone.ArrowRightAlt"/>
+							<MudItem Style="align-content: center" xs="1">
+								<MudIcon Size="Size.Large" Icon="@Icons.Material.TwoTone.ArrowRightAlt"/>
 							</MudItem>
 							<MudSpacer/>
 							<MudItem xs="2">
-								<MudTextField Variant="Variant.Outlined" Required T="int" Label="Total lockers" @bind-Value="@loc.LockerCount"/>
+								<MudTextField Variant="Variant.Outlined" Required T="int" Label="Total lockers" @bind-Value="@loc.LockerCount" For="@(() => loc.LockerCount)" Error="@(loc.LockerCount == 0)"/>
 							</MudItem>
 							<MudItem xs="2">
-								<MudTextField Variant="Variant.Outlined" Required T="int" Label="Lockers per column" @bind-Value="@loc.LockersPerColumn"/>
+								<MudTextField Variant="Variant.Outlined" Required T="int" Label="Lockers per column" @bind-Value="@loc.LockersPerColumn" For="@(() => loc.LockersPerColumn)" Error="@(loc.LockersPerColumn == 0 || (loc.LockerCount % loc.LockersPerColumn != 0))" ErrorText="Total locker count should be divisable by Lockers perColumn!" />
 							</MudItem>
 						</MudGrid>
 					</MudStack>
@@ -81,30 +81,50 @@
 						var loc = _locations[i];
 						int index = i;
 						<MudPaper Elevation="3" Class="pa-4 ma-2">
-							<MudItem>
-								<MudGrid>
-									<MudItem Style="width: auto; min-width: 100px">
-										<MudText>@loc.Name </MudText>
-										<MudText>Prefix: @loc.Prefix </MudText>
-									</MudItem>
-									<MudItem>
-										<MudDivider Vertical/>
-									</MudItem>
-									<MudItem>
-										<MudText>Total: @loc.LockerCount </MudText>
-										<MudText>Per Column: @loc.LockersPerColumn </MudText>
-									</MudItem>
-									<MudItem>
-										<MudStack Row Justify="Justify.Center">
-											@foreach (var locker in _previewLocationLockers[index])
-											{
-												<MudPaper>
-													@locker.Number
-												</MudPaper>
-											}
-										</MudStack>
-									</MudItem>
-								</MudGrid>
+							<MudGrid>
+								<MudItem Style="width: auto; min-width: 100px">
+									<MudText>@loc.Name </MudText>
+									<MudText>Prefix: @loc.Prefix </MudText>
+								</MudItem>
+								<MudItem>
+									<MudDivider Vertical/>
+								</MudItem>
+								<MudItem>
+									<MudText>Total: @loc.LockerCount </MudText>
+									<MudText>Per Column: @loc.LockersPerColumn </MudText>
+								</MudItem>
+							</MudGrid>
+							<MudItem Class="mt-4">
+								<MudStack Row Justify="Justify.Center">
+									@{
+										var lockers = _previewLocationLockers[index];
+										var columns = loc.LockersPerColumn;
+										var rows = loc.LockerCount / columns;
+										@for (var rowIndex = 0; rowIndex < rows; rowIndex++)
+										{
+											var index1 = rowIndex;
+											<MudStack>
+												@for (var colIdx = 0; colIdx < columns; colIdx++)
+												{
+													var lockerIdx = index1 * columns + colIdx;
+													// Calculate gradient position based on row and column
+													double percent = ((index1 + colIdx) * 1.0) / (rows + columns - 2);
+													// Interpolate between two colors (blue and green)
+													// int r = (int)(0 + percent * (0 - 0));
+													// int g = (int)(123 + percent * (255 - 123));
+													// int b = (int)(255 + percent * (0 - 255));
+													int r = (int)(90 + percent * (52 - 90));
+													int g = (int)(200 + percent * (199 - 200));
+													int b = (int)(250 + percent * (89 - 250));
+													string bgColor = $"rgb({r},{g},{b})";
+													<MudPaper Outlined Class="pa-1 ma-n1 border-1 mud-border-dark" Style="@($"background-color: {bgColor};")">
+														@lockers[lockerIdx].Number
+													</MudPaper>
+												}
+											</MudStack>
+										}
+									}
+								</MudStack>
 							</MudItem>
 						</MudPaper>
 					}
@@ -282,9 +302,10 @@
 				Locker locker = new Locker
 				{
 					Number = _locations[i].Prefix + (j + 1).ToString("D3"),
+					//Location = _locations[i],
 					LocationID = _locations[i].ID,
-					StudentID = null,
-					Student = null,
+					//StudentID = null,
+					//Student = null,
 					Status = Enums.LockerStatus.Available
 				};
 				_previewLocationLockers[i].Add(locker);
@@ -296,14 +317,20 @@
 	{
 		foreach (var loc in _locations)
 		{
-			await LocationService.AddLocationAsync(loc);
+			Location addedLocation = (await LocationService.AddLocationAsync(loc))!;
+			loc.ID = addedLocation.ID;
 		}
 
-		foreach (List<Locker> locationLockers in _previewLocationLockers)
+		for (var i = 0; i < _previewLocationLockers.Count; i++)
 		{
-			foreach (Locker locker in locationLockers)
+			var locationLockers = _previewLocationLockers[i];
+			var newLoc = (await LocationService.GetLocationByIdAsync(_locations[i].ID))!;
+			for (var j = 0; j < locationLockers.Count; j++)
 			{
-				await LockerService.AddLockerAsync(locker);
+				
+				locationLockers[j].LocationID = newLoc.ID;
+				locationLockers[j].Location = newLoc;
+				await LockerService.AddLockerAsync(locationLockers[j]);
 			}
 		}
 

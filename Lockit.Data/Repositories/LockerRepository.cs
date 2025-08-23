@@ -30,6 +30,9 @@ public class LockerRepository : ILockerRepository
 
 	public async Task<Locker> AddLockerAsync(Locker locker)
 	{
+		// Clear the Location navigation property to avoid EF tracking it as new
+		locker.Location = null;
+
 		var result = await _context.Lockers.AddAsync(locker);
 		await _context.SaveChangesAsync();
 		return result.Entity;
