@@ -1,8 +1,202 @@
 ﻿@page "/import-reservations"
+@using EasyCsv.Components
+@using EasyCsv.Core
 
-<CsvFileInput></CsvFileInput>
-<CsvTableHeaderMatcher ></CsvTableHeaderMatcher>
+<MudStepper ShowResetButton OnPreviewInteraction="OnPreviewInteraction">
+	<ChildContent>
+		<MudStep Title="Load reservations" HasError="!_headerMatcher?.ValidateRequiredHeaders() ?? true">
+			<div class="mb-4 d-flex gap-5" style="flex-direction: row; align-items: baseline;">
+				<MudText Class="mb-4" Typo="Typo.h4">Locker reservations</MudText>
+				@if (_reservationsCsv != null)
+				{
+					<MudButton Style="height: fit-content;" en Variant="Variant.Filled" Color="Color.Error" OnClick="() => { _reservationsCsv = null; _records = null; }">Reset</MudButton>
+				}
+			</div>
+			@if (_reservationsCsv == null)
+			{
+				<CsvFileInput CsvValid="_reservationsCsv != null" OnCsvUpload="x => _reservationsCsv = x.Csv" ButtonTooltip="Upload locker reservations" ButtonText="Upload locker reservations" />
+			}
+			else
+			{
+				<CsvTableHeaderMatcher HideDefaultValueColumn="true" @ref="_headerMatcher" Csv="_reservationsCsv" AllHeadersValidChanged="StateHasChanged" ExpectedHeaders="_expectedHeaders" AutoMatch="AutoMatching.Lenient"/>
+				@* <div class="mt-4 d-flex gap-5" style="flex-direction: row; align-items: center;" >
+					<MudButton Disabled="!_headerMatcher?.ValidateRequiredHeaders() ?? true" Color="Color.Primary" Variant="Variant.Filled" OnClick="GetRows" >Load reservations</MudButton>
+				</div> *@
+			}
+		</MudStep>
+		<MudStep Title="Reservations overview">
+			<MudTable Class="mt-7" Items="_records" Height="calc(80vh - (var(--mud-appbar-height) + 60px))" Outlined Virtualize Dense Hover FixedHeader>
+				<ToolBarContent>
+					<MudText Typo="Typo.h6">All Reservations</MudText>
+					<MudSpacer />
+					<MudTextField @bind-Value="_searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"/>
+				</ToolBarContent>
+				<HeaderContent>
+					<MudTh >Name</MudTh>
+					<MudTh >Last Name</MudTh>
+					<MudTh >Class</MudTh>
+					<MudTh >Email</MudTh>
+				</HeaderContent>
+				<RowTemplate>
+					<MudTd>@context.Name</MudTd>
+					<MudTd>@context.LastName</MudTd>
+					<MudTd>@context.Class</MudTd>
+					<MudTd>@context.Email</MudTd>
+				</RowTemplate>
+				<PagerContent>
+					<MudTablePager PageSizeOptions="new[] { 10, 25, 100, int.MaxValue }"
+					               RowsPerPageString="Rows per page"
+					               AllItemsText="All"
+					               InfoFormat="{first_item}-{last_item} // {all_items}"/>
+				</PagerContent>
+			</MudTable>
+		</MudStep>
+		<MudStep Title="Set preferences">
+			<MudDropContainer T="PrefDropItem" @bind-Items="_prefrences" ItemsSelector="@((item,dropzone) => true)">
+				<ChildContent>
+					<MudPaper Class="ma-4 flex-grow-1">
+						<MudList T="string" Class="d-flex flex-column mud-height-full">
+							<MudListSubheader>Locker Assignment Preferences</MudListSubheader>
+							<MudDropZone T="PrefDropItem" Identifier="1" Class="flex-grow-1" AllowReorder Tag="@_prefrences.Count" />
+						</MudList>
+					</MudPaper>
+				</ChildContent>
+				<ItemRenderer>
+					<div class="mb-4 mr-4 d-flex gap-6" style="flex-direction: row; align-items: baseline;">
+						<MudIconButton Icon="@Icons.Material.Filled.DragHandle" Color="Color.Primary" Class="ml-2 align-self-center mud-cursor-move pointer-events-none" />
+						<MudSelect @bind-Value="@context.Name" Label="Year preference" Variant="Variant.Outlined" Style="min-width: 180px">
+							<MudSelectItem Value="@("1st years")"/>
+							<MudSelectItem Value="@("2nd years")"/>
+							<MudSelectItem Value="@("3rd years")"/>
+							<MudSelectItem Value="@("4th years")"/>
+							<MudSelectItem Value="@("5th years")"/>
+							<MudSelectItem Value="@("6th years")"/>
+						</MudSelect>
+						<MudSelect @bind-Value="@context.LocationID" Label="Location preference" Variant="Variant.Outlined" AdornmentIcon="@Icons.Material.Filled.LocationSearching" FullWidth="true">
+							@foreach (var loc in _locations)
+							{
+								<MudSelectItem  Value="@loc.ID">@loc.Name</MudSelectItem>
+							}
+						</MudSelect>
+					</div>
+
+				</ItemRenderer>
+			</MudDropContainer>
+			<MudGrid Justify="Justify.FlexEnd">
+				<MudItem>
+					<MudIconButton Icon="@Icons.Material.Filled.AddCircle" OnClick="AddPref" Color="Color.Success"/>
+					<MudIconButton Disabled="_locations.Count <= 0" Icon="@Icons.Material.Filled.Cancel" OnClick="RemovePref" Color="Color.Secondary"/>
+				</MudItem>
+			</MudGrid>
+		</MudStep>
+		<MudStep Title="Overview"></MudStep>
+	</ChildContent>
+</MudStepper>
+<MudIconButton Icon="@Icons.Material.Filled.DragHandle" Color="Color.Primary" Class="ml-2 mud-cursor-move" />
 
 @code {
+	[Inject] 
+	public IDialogService DialogService { get; set; }
+	[Inject]
+	public LocationService LocationService { get; set; }
+	private CsvTableHeaderMatcher _headerMatcher;
+	private IEasyCsv? _reservationsCsv;
 
+	private List<Student>? _records;
+
+	private List<Location> _locations;
+
+	protected override async Task OnInitializedAsync()
+	{
+		_locations = await LocationService.GetAllLocationsAsync();
+	}
+
+	private readonly List<ExpectedHeader> _expectedHeaders = new ()
+	{
+		new ExpectedHeader(nameof(Student.Name), ExpectedHeaderConfig.Required),
+		new ExpectedHeader(nameof(Student.LastName), ExpectedHeaderConfig.Required),
+		new ExpectedHeader(nameof(Student.Email), ExpectedHeaderConfig.Default),
+		new ExpectedHeader(nameof(Student.Class), ExpectedHeaderConfig.Required),
+		new ExpectedHeader(nameof(Student.SCUID)),
+	};
+
+	private string _searchString = string.Empty;
+
+	private async Task GetRows()
+	{
+		if (_headerMatcher == null) return;
+		_records = await _headerMatcher.GetRecords<Student>();
+	}
+
+	private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
+	{
+		switch (arg.Action)
+		{
+			case StepAction.Complete:
+				// occurs when clicking next
+				await ControlStepCompletion(arg);
+				break;
+			case StepAction.Activate:
+				// occurs when clicking a step header with the mouse
+				//await ControlStepNavigation(arg);
+				break;
+			case StepAction.Reset:
+				// occurs when clicking the reset button
+
+				break;
+			case StepAction.Skip:
+				// occurs when clicking the skip button
+				break;
+		}
+	}
+
+	private async Task ControlStepCompletion(StepperInteractionEventArgs arg)
+	{
+		switch (arg.StepIndex) {
+			case 0:
+				if (!_headerMatcher?.ValidateRequiredHeaders() ?? true)
+				{
+					await DialogService.ShowMessageBox("Error", "Please ensure all required headers are present");
+					arg.Cancel = true;
+				}
+				else
+				{
+					await GetRows();
+				}
+				break;
+			case 1:
+
+				break;
+			case 2:
+
+				break;
+			case 3:
+				break;
+		}
+	}
+
+
+	private List<PrefDropItem> _prefrences = new()
+	{
+		new PrefDropItem(){ Name = "1ste years" ,GUID = 0},
+		new PrefDropItem(){ Name = "2ste years" ,GUID = 1},
+		new PrefDropItem(){ Name = "3ste years" ,GUID = 2},
+	};
+
+	public class PrefDropItem
+	{
+		public string Name { get; set; }
+		public int GUID {get; set; }
+		public int LocationID { get; set; }
+	}
+
+	private void AddPref()
+	{
+		_prefrences.Add(new PrefDropItem());
+	}
+
+	private void RemovePref()
+	{
+		_prefrences.RemoveAt(_prefrences.Count - 1);
+	}
 }
