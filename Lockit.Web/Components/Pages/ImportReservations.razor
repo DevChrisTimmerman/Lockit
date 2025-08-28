@@ -1,6 +1,8 @@
-ï»¿@page "/import-reservations"
+@page "/import-reservations"
 @using EasyCsv.Components
 @using EasyCsv.Core
+@using System.Text.RegularExpressions
+@using MudBlazor.Utilities
 
 <MudStepper ShowResetButton OnPreviewInteraction="OnPreviewInteraction">
 	<ChildContent>
@@ -9,7 +11,7 @@
 				<MudText Class="mb-4" Typo="Typo.h4">Locker reservations</MudText>
 				@if (_reservationsCsv != null)
 				{
-					<MudButton Style="height: fit-content;" en Variant="Variant.Filled" Color="Color.Error" OnClick="() => { _reservationsCsv = null; _records = null; }">Reset</MudButton>
+					<MudButton Style="height: fit-content;" Variant="Variant.Filled" Color="Color.Error" OnClick="() => { _reservationsCsv = null; _records = null; }">Reset</MudButton>
 				}
 			</div>
 			@if (_reservationsCsv == null)
@@ -19,9 +21,6 @@
 			else
 			{
 				<CsvTableHeaderMatcher HideDefaultValueColumn="true" @ref="_headerMatcher" Csv="_reservationsCsv" AllHeadersValidChanged="StateHasChanged" ExpectedHeaders="_expectedHeaders" AutoMatch="AutoMatching.Lenient"/>
-				@* <div class="mt-4 d-flex gap-5" style="flex-direction: row; align-items: center;" >
-					<MudButton Disabled="!_headerMatcher?.ValidateRequiredHeaders() ?? true" Color="Color.Primary" Variant="Variant.Filled" OnClick="GetRows" >Load reservations</MudButton>
-				</div> *@
 			}
 		</MudStep>
 		<MudStep Title="Reservations overview">
@@ -44,7 +43,7 @@
 					<MudTd>@context.Email</MudTd>
 				</RowTemplate>
 				<PagerContent>
-					<MudTablePager PageSizeOptions="new[] { 10, 25, 100, int.MaxValue }"
+					<MudTablePager PageSizeOptions="new[] { 25, 100, int.MaxValue }"
 					               RowsPerPageString="Rows per page"
 					               AllItemsText="All"
 					               InfoFormat="{first_item}-{last_item} // {all_items}"/>
@@ -52,7 +51,7 @@
 			</MudTable>
 		</MudStep>
 		<MudStep Title="Set preferences">
-			<MudDropContainer T="PrefDropItem" @bind-Items="_prefrences" ItemsSelector="@((item,dropzone) => true)">
+			<MudDropContainer T="PrefDropItem" @bind-Items="_prefrences" ItemsSelector="@((item,dropzone) => true)" ItemDropped="ItemUpdated">
 				<ChildContent>
 					<MudPaper Class="ma-4 flex-grow-1">
 						<MudList T="string" Class="d-flex flex-column mud-height-full">
@@ -64,15 +63,16 @@
 				<ItemRenderer>
 					<div class="mb-4 mr-4 d-flex gap-6" style="flex-direction: row; align-items: baseline;">
 						<MudIconButton Icon="@Icons.Material.Filled.DragHandle" Color="Color.Primary" Class="ml-2 align-self-center mud-cursor-move pointer-events-none" />
-						<MudSelect @bind-Value="@context.Name" Label="Year preference" Variant="Variant.Outlined" Style="min-width: 180px">
-							<MudSelectItem Value="@("1st years")"/>
-							<MudSelectItem Value="@("2nd years")"/>
-							<MudSelectItem Value="@("3rd years")"/>
-							<MudSelectItem Value="@("4th years")"/>
-							<MudSelectItem Value="@("5th years")"/>
-							<MudSelectItem Value="@("6th years")"/>
+						<MudSelect @bind-Value="@context.Year" Label="Year preference" Variant="Variant.Outlined" Style="min-width: 180px">
+							<MudSelectItem Value="1">1st years</MudSelectItem>
+							<MudSelectItem Value="2"> 2nd years</MudSelectItem>
+							<MudSelectItem Value="3"> 3rd years</MudSelectItem>
+							<MudSelectItem Value="4"> 4th years</MudSelectItem>
+							<MudSelectItem Value="5"> 5th years</MudSelectItem>
+							<MudSelectItem Value="6"> 6th years</MudSelectItem>
 						</MudSelect>
-						<MudSelect @bind-Value="@context.LocationID" Label="Location preference" Variant="Variant.Outlined" AdornmentIcon="@Icons.Material.Filled.LocationSearching" FullWidth="true">
+						<MudSelect @bind-Value="@context.LocationID" Label="Location preference" Variant="Variant.Outlined" AdornmentIcon="@Icons.Material.Filled.LocationSearching" FullWidth Validation="() => context.LocationID != -1">
+								<MudSelectItem  Value="-1">Choose a location</MudSelectItem>
 							@foreach (var loc in _locations)
 							{
 								<MudSelectItem  Value="@loc.ID">@loc.Name</MudSelectItem>
@@ -89,22 +89,188 @@
 				</MudItem>
 			</MudGrid>
 		</MudStep>
-		<MudStep Title="Overview"></MudStep>
+		<MudStep Title="Review assignments">
+			@if (_proposedAssignments?.Any() != true)
+			{
+				<MudButton StartIcon="@Icons.Material.Filled.GeneratingTokens" Variant="Variant.Filled" Color="Color.Success" OnClick="AutoAssignLockers">Generate Locker Assignments</MudButton>
+			}
+			else
+			{
+				<div class="mb-4 d-flex gap-4" style="flex-direction: row; align-items: baseline;">
+					<MudText Typo="Typo.h6">Proposed Assignments (@_proposedAssignments.Count)</MudText>
+					<MudButton StartIcon="@Icons.Material.Filled.Refresh" Variant="Variant.Outlined" Color="Color.Secondary" OnClick="AutoAssignLockers">Regenerate</MudButton>
+					<MudSpacer />
+					<MudButton StartIcon="@Icons.Material.Filled.Save" Variant="Variant.Filled" Color="Color.Primary" OnClick="CommitAssignments" Disabled="_isCommitting">
+						@if (_isCommitting)
+						{
+							<MudProgressCircular Class="mr-3" Size="Size.Small" Indeterminate="true" />
+							<span>Committing...</span>
+						}
+						else
+						{
+							<span>Commit All Assignments</span>
+						}
+					</MudButton>
+				</div>
+
+				<MudTable Items="_proposedAssignments" Filter="new Func<KeyValuePair<Student, Locker>, bool>(SearchFunc)" Height="calc(70vh - (var(--mud-appbar-height) + 60px))" Outlined Virtualize Dense Hover FixedHeader>
+					<ToolBarContent>
+						<MudText Typo="Typo.h6">Assignment Preview</MudText>
+						<MudSpacer />
+						<MudTextField @bind-Value="_assignmentSearchString" Placeholder="Search assignments" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"/>
+					</ToolBarContent>
+					<HeaderContent>
+						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => x.Key.Name)">Name</MudTableSortLabel></MudTh>
+						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => x.Key.Class)">Class</MudTableSortLabel></MudTh>
+						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => ParseStudentYear(x.Key.Class))">Year</MudTableSortLabel></MudTh>
+						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => x.Value.Number)">Locker #</MudTableSortLabel></MudTh>
+						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => _locations.FirstOrDefault(l => l.ID == x.Value.LocationID)?.Name ?? string.Empty)">Location</MudTableSortLabel></MudTh>
+						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => ParseStudentYear(x.Key.Class))">Priority</MudTableSortLabel></MudTh>
+					</HeaderContent>
+					<RowTemplate>
+						<MudTd>@($"{context.Key.Name} {context.Key.LastName}")</MudTd>
+						<MudTd>@context.Key.Class</MudTd>
+						<MudTd>@(ParseStudentYear(context.Key.Class))</MudTd>
+						<MudTd>@context.Value.Number</MudTd>
+						<MudTd>@(_locations.FirstOrDefault(l => l.ID == context.Value.LocationID)?.Name)</MudTd>
+						<MudTd>
+							<MudChip T="string" Size="Size.Small" Color="@GetYearPriorityColor(ParseStudentYear(context.Key.Class))">
+								@GetYearPriorityText(ParseStudentYear(context.Key.Class))
+							</MudChip>
+						</MudTd>
+					</RowTemplate>
+					<PagerContent>
+						<MudTablePager PageSizeOptions="new[] { 25, 100, int.MaxValue }"
+						               RowsPerPageString="Rows per page"
+						               AllItemsText="All"
+						               InfoFormat="{first_item}-{last_item} // {all_items}"/>
+					</PagerContent>
+				</MudTable>
+
+				<MudDivider Class="my-6" />
+
+				<MudText Typo="Typo.h6" Class="mb-4">Locker Assignments by Location</MudText>
+				<MudGrid Class="pa-4" Justify="Justify.SpaceEvenly">
+					@foreach (var location in _locations)
+					{
+						var locationAssignments = _proposedAssignments.Where(a => a.Value.LocationID == location.ID).ToList();
+						if (locationAssignments.Any())
+						{
+							<MudPaper Elevation="3" Class="pa-4 ma-2">
+								<MudGrid>
+									<MudItem Style="width: auto; min-width: 100px">
+										<MudText Typo="Typo.h6">@location.Name</MudText>
+										<MudText Typo="Typo.body2">Assigned: @locationAssignments.Count</MudText>
+										@if (!string.IsNullOrEmpty(location.Prefix))
+										{
+											<MudText Typo="Typo.body2">Prefix: @location.Prefix</MudText>
+										}
+									</MudItem>
+									<MudItem>
+										<MudDivider Vertical/>
+									</MudItem>
+									<MudItem>
+										<MudText Typo="Typo.body2">Total Capacity: @location.LockerCount</MudText>
+										<MudText Typo="Typo.body2">Per Column: @location.LockersPerColumn</MudText>
+										<MudText Typo="Typo.body2">Remaining: @(location.LockerCount - locationAssignments.Count)</MudText>
+									</MudItem>
+								</MudGrid>
+								<MudItem Class="mt-4">
+									<MudStack Row Justify="Justify.Center">
+										@{
+											var columns = location.LockersPerColumn;
+											var rows = location.LockerCount / columns;
+											@for (var rowIndex = 0; rowIndex < rows; rowIndex++)
+											{
+												var currentRowIndex = rowIndex;
+												<MudStack>
+													@for (var colIndex = 0; colIndex < columns; colIndex++)
+													{
+														var lockerIndex = currentRowIndex * columns + colIndex;
+														var lockerNumber = GetLockerNumber(location, lockerIndex + 1);
+														var assignment = locationAssignments.FirstOrDefault(a => a.Value.Number == lockerNumber);
+														var isAssigned = assignment.Key != null;
+														var studentYear = isAssigned ? ParseStudentYear(assignment.Key.Class) : 0;
+														var priorityColor = isAssigned ? GetYearPriorityColor(studentYear) : Color.Surface;
+														var borderColor = isAssigned ? "border: 2px solid var(--mud-palette-" + priorityColor.ToString().ToLower() + ");" : "border: 1px solid var(--mud-palette-lines-default);";
+														var bgColor = isAssigned ? GetPriorityBackgroundColor(studentYear) : "var(--mud-palette-surface)";
+														var textColor = isAssigned ? "var(--mud-palette-text-primary)" : "var(--mud-palette-text-secondary)";
+														
+														<MudTooltip>
+															<ChildContent>
+																<MudPaper Outlined Class="pa-1 ma-1" Style="@($"background-color: {bgColor}; {borderColor} color: {textColor}; min-width: 45px; text-align: center; cursor: pointer;")">
+																	<MudText Typo="Typo.caption">@lockerNumber</MudText>
+																	@if (isAssigned)
+																	{
+																		<MudText Typo="Typo.caption" Style="font-size: 0.6rem;">@studentYear</MudText>
+																	}
+																</MudPaper>
+															</ChildContent>
+															<TooltipContent>
+																@if (isAssigned)
+																{
+																	<MudText Typo="Typo.body2"><strong>@lockerNumber</strong></MudText>
+																	<MudText Typo="Typo.body2">@assignment.Key.Name @assignment.Key.LastName</MudText>
+																	<MudText Typo="Typo.body2">Class: @assignment.Key.Class</MudText>
+																	<MudText Typo="Typo.body2">Year: @studentYear (@GetYearPriorityText(studentYear))</MudText>
+																}
+																else
+																{
+																	<MudText Typo="Typo.body2">@lockerNumber - Available</MudText>
+																}
+															</TooltipContent>
+														</MudTooltip>
+													}
+												</MudStack>
+											}
+										}
+									</MudStack>
+								</MudItem>
+							</MudPaper>
+						}
+					}
+				</MudGrid>
+
+				@if (_unassignedStudents?.Any() == true)
+				{
+					<MudAlert Class="mt-4" Severity="Severity.Warning">
+						<MudText><strong>@_unassignedStudents.Count students could not be assigned:</strong></MudText>
+						@foreach (var student in _unassignedStudents.Take(10))
+						{
+							<MudText Typo="Typo.body2">• @student.Name @student.LastName (@student.Class)</MudText>
+						}
+						@if (_unassignedStudents.Count > 10)
+						{
+							<MudText Typo="Typo.body2">... and @(_unassignedStudents.Count - 10) more</MudText>
+						}
+					</MudAlert>
+				}
+			}
+		</MudStep>
 	</ChildContent>
 </MudStepper>
-<MudIconButton Icon="@Icons.Material.Filled.DragHandle" Color="Color.Primary" Class="ml-2 mud-cursor-move" />
 
 @code {
 	[Inject] 
 	public IDialogService DialogService { get; set; }
 	[Inject]
 	public LocationService LocationService { get; set; }
+	[Inject]
+	public LockerService LockerService { get; set; }
+	[Inject]
+	public StudentService StudentService { get; set; }
+	
 	private CsvTableHeaderMatcher _headerMatcher;
 	private IEasyCsv? _reservationsCsv;
 
 	private List<Student>? _records;
-
 	private List<Location> _locations;
+
+	// Assignment tracking
+	private Dictionary<Student, Locker>? _proposedAssignments;
+	private List<Student>? _unassignedStudents;
+	private bool _isCommitting = false;
+	private string _vacantLockerSort = "zzz";
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -121,11 +287,22 @@
 	};
 
 	private string _searchString = string.Empty;
+	private string _assignmentSearchString = string.Empty;
+
+	private void SearchFunc()
+	{
+
+	}
 
 	private async Task GetRows()
 	{
 		if (_headerMatcher == null) return;
 		_records = await _headerMatcher.GetRecords<Student>();
+	}
+
+	private void ItemUpdated(MudItemDropInfo<PrefDropItem> dropItem)
+	{
+		_prefrences.UpdateOrder(dropItem, item => item.Index, dropItem.IndexInZone);
 	}
 
 	private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
@@ -142,7 +319,9 @@
 				break;
 			case StepAction.Reset:
 				// occurs when clicking the reset button
-
+				// Reset all assignment data
+				_proposedAssignments = null;
+				_unassignedStudents = null;
 				break;
 			case StepAction.Skip:
 				// occurs when clicking the skip button
@@ -153,7 +332,7 @@
 	private async Task ControlStepCompletion(StepperInteractionEventArgs arg)
 	{
 		switch (arg.StepIndex) {
-			case 0:
+			case 0: // CVS upload step
 				if (!_headerMatcher?.ValidateRequiredHeaders() ?? true)
 				{
 					await DialogService.ShowMessageBox("Error", "Please ensure all required headers are present");
@@ -164,30 +343,39 @@
 					await GetRows();
 				}
 				break;
-			case 1:
+			case 1: // CVS overview step
 
 				break;
-			case 2:
-
+			case 2: // Preferences step
+				// Validate preferences
+				if (_prefrences.Any(p => p.LocationID == -1))
+				{
+					await DialogService.ShowMessageBox("Error", "Please ensure all preferences have a location assigned");
+					arg.Cancel = true;
+				}
 				break;
-			case 3:
+			case 3: // Review assignments step
+				if (_proposedAssignments?.Any() != true)
+				{
+					await DialogService.ShowMessageBox("Error", "Please generate locker assignments first");
+					arg.Cancel = true;
+				}
 				break;
 		}
 	}
 
-
 	private List<PrefDropItem> _prefrences = new()
 	{
-		new PrefDropItem(){ Name = "1ste years" ,GUID = 0},
-		new PrefDropItem(){ Name = "2ste years" ,GUID = 1},
-		new PrefDropItem(){ Name = "3ste years" ,GUID = 2},
+		new PrefDropItem(){ Year = 1 ,Index = 0},
+		new PrefDropItem(){ Year = 2 ,Index = 1},
+		new PrefDropItem(){ Year = 3 ,Index = 2},
 	};
 
 	public class PrefDropItem
 	{
-		public string Name { get; set; }
-		public int GUID {get; set; }
-		public int LocationID { get; set; }
+		public int Year { get; set; }
+		public int Index {get; set; }
+		public int LocationID { get; set; } = -1;
 	}
 
 	private void AddPref()
@@ -198,5 +386,336 @@
 	private void RemovePref()
 	{
 		_prefrences.RemoveAt(_prefrences.Count - 1);
+	}
+
+	private async Task AutoAssignLockers()
+	{
+		if (_records == null || !_records.Any())
+		{
+			await DialogService.ShowMessageBox("Error", "No students to assign lockers to.");
+			return;
+		}
+
+		try
+		{
+			// Initialize assignment tracking
+			_proposedAssignments = new Dictionary<Student, Locker>();
+			_unassignedStudents = new List<Student>();
+
+			// 1. Parse student year levels and sort by priority (6th->1st years)
+			var studentsWithYears = _records
+				.Select(student => new { Student = student, Year = ParseStudentYear(student.Class) })
+				.OrderByDescending(x => x.Year) // Higher years get priority
+				.ToList();
+
+			// 2. Get all available lockers and group by location
+			var allLockers = await LockerService.GetAllLockersAsync();
+			var availableLockersByLocation = allLockers
+				.Where(l => l.Status == Enums.LockerStatus.Available)
+				.GroupBy(l => l.LocationID)
+				.ToDictionary(g => g.Key, g => g.OrderBy(l => CalculateLockerPriority(l, _locations.First(loc => loc.ID == l.LocationID))).ToList());
+
+			// 3. For each student (in priority order)
+			foreach (var studentWithYear in studentsWithYears)
+			{
+				var student = studentWithYear.Student;
+				bool assigned = false;
+				
+				// 4. Find preferences for this year group (ordered by priority)
+				var yearPreferences = _prefrences
+					.Where(p => p.Year == studentWithYear.Year)
+					.OrderBy(p => p.Index)
+					.ToList();
+
+				// Try each location preference in order
+				foreach (var preference in yearPreferences)
+				{
+					if (availableLockersByLocation.ContainsKey(preference.LocationID) && 
+						availableLockersByLocation[preference.LocationID].Any())
+					{
+						// Assign the highest available locker at this location (top-row, left-to-right priority)
+						var locker = availableLockersByLocation[preference.LocationID].First();
+						
+						// Track assignment (don't commit to database yet)
+						_proposedAssignments[student] = locker;
+						
+						// Remove from available list
+						availableLockersByLocation[preference.LocationID].Remove(locker);
+						
+						assigned = true;
+						break;
+					}
+				}
+
+				// If no preferred location available, try any remaining locker with highest priority
+				if (!assigned)
+				{
+					var anyAvailableLocker = availableLockersByLocation.Values
+						.SelectMany(lockers => lockers)
+						.OrderBy(l => CalculateLockerPriority(l, _locations.First(loc => loc.ID == l.LocationID)))
+						.FirstOrDefault();
+
+					if (anyAvailableLocker != null)
+					{
+						// Track assignment (don't commit to database yet)
+						_proposedAssignments[student] = anyAvailableLocker;
+						
+						availableLockersByLocation[anyAvailableLocker.LocationID].Remove(anyAvailableLocker);
+					}
+					else
+					{
+						_unassignedStudents.Add(student);
+					}
+				}
+			}
+
+			// Trigger UI update to show the assignments table
+			StateHasChanged();
+		}
+		catch (Exception ex)
+		{
+			await DialogService.ShowMessageBox("Error", $"An error occurred during assignment: {ex.Message}");
+		}
+	}
+
+	private async Task CommitAssignments()
+	{
+		if (_proposedAssignments?.Any() != true)
+		{
+			await DialogService.ShowMessageBox("Error", "No assignments to commit.");
+			return;
+		}
+
+		_isCommitting = true;
+		StateHasChanged();
+
+		try
+		{
+			int successCount = 0;
+			int errorCount = 0;
+			var errors = new List<string>();
+
+			// Add students in batch and get the results with IDs
+			var studentsToAdd = _proposedAssignments.Select(u => u.Key).Distinct().Where(u => u.ID == 0).ToList();
+			var addedStudents = await StudentService.AddStudentsBatchAsync(studentsToAdd);
+
+			// Update the student IDs in the original objects
+			foreach (var addedStudent in addedStudents)
+			{
+				var originalStudent = studentsToAdd.FirstOrDefault(s => 
+					s.Name == addedStudent.Name && 
+					s.LastName == addedStudent.LastName && 
+					s.Email == addedStudent.Email);
+				if (originalStudent != null)
+				{
+					originalStudent.ID = addedStudent.ID;
+				}
+			}
+
+			foreach (var assignment in _proposedAssignments)
+			{
+				try
+				{
+					var student = assignment.Key;
+					var locker = assignment.Value;
+
+					// Update locker with student assignment
+					locker.StudentID = student.ID;
+					locker.Status = Enums.LockerStatus.Occupied;
+					
+					await LockerService.UpdateLockerAsync(locker);
+					successCount++;
+				}
+				catch (Exception ex)
+				{
+					errorCount++;
+					errors.Add($"Failed to assign {assignment.Key.Name} {assignment.Key.LastName}: {ex.Message}");
+				}
+			}
+
+			// Show completion summary
+			var locationBreakdown = string.Join("\n", 
+				_locations.Select(loc => {
+					var count = _proposedAssignments.Count(a => a.Value.LocationID == loc.ID);
+					return count > 0 ? $"- {loc.Name}: {count} students" : null;
+				}).Where(x => x != null));
+
+			var summaryMessage = $"Assignment completed!\n\n" +
+								$"Successfully assigned: {successCount}\n" +
+								$"Errors: {errorCount}\n" +
+								$"Students unassigned: {_unassignedStudents?.Count ?? 0}\n\n";
+
+			if (!string.IsNullOrEmpty(locationBreakdown))
+			{
+				summaryMessage += $"Breakdown by location:\n{locationBreakdown}";
+			}
+
+			if (errors.Any())
+			{
+				summaryMessage += $"\n\nErrors:\n{string.Join("\n", errors.Take(5))}";
+				if (errors.Count > 5)
+				{
+					summaryMessage += $"\n... and {errors.Count - 5} more errors";
+				}
+			}
+
+			await DialogService.ShowMessageBox("Assignment Complete", summaryMessage);
+
+			// Clear assignments after successful commit
+			if (errorCount == 0)
+			{
+				_proposedAssignments = null;
+				_unassignedStudents = null;
+			}
+		}
+		catch (Exception ex)
+		{
+			await DialogService.ShowMessageBox("Error", $"An error occurred during commit: {ex.Message}");
+		}
+		finally
+		{
+			_isCommitting = false;
+			StateHasChanged();
+		}
+	}
+
+	private int ParseStudentYear(string studentClass)
+	{
+		if (string.IsNullOrWhiteSpace(studentClass))
+			return 1;
+
+		// Try to extract numeric year from various formats like "1A", "2B", "3rd year", etc.
+		var match = Regex.Match(studentClass, @"(\d+)");
+		if (match.Success && int.TryParse(match.Groups[1].Value, out int year))
+		{
+			return Math.Max(1, Math.Min(6, year)); // Clamp between 1-6
+		}
+
+		// Fallback: try to parse ordinal numbers
+		if (studentClass.Contains("1st", StringComparison.OrdinalIgnoreCase)) return 1;
+		if (studentClass.Contains("2nd", StringComparison.OrdinalIgnoreCase)) return 2;
+		if (studentClass.Contains("3rd", StringComparison.OrdinalIgnoreCase)) return 3;
+		if (studentClass.Contains("4th", StringComparison.OrdinalIgnoreCase)) return 4;
+		if (studentClass.Contains("5th", StringComparison.OrdinalIgnoreCase)) return 5;
+		if (studentClass.Contains("6th", StringComparison.OrdinalIgnoreCase)) return 6;
+
+		return 1; // Default to 1st year if unable to parse
+	}
+
+	private int CalculateLockerPriority(Locker locker, Location location)
+	{
+		// Parse locker number to get its index
+		var numberPart = locker.Number;
+		if (!string.IsNullOrEmpty(location.Prefix))
+		{
+			numberPart = locker.Number.Replace(location.Prefix, "");
+		}
+
+		if (int.TryParse(numberPart, out int lockerIndex))
+		{
+			// Convert to 0-based index
+			lockerIndex = lockerIndex - 1;
+			
+			// Calculate position in grid
+			int row = lockerIndex / location.LockersPerColumn;
+			int col = lockerIndex % location.LockersPerColumn;
+			
+			// Priority calculation for horizontal distribution:
+			// Top row gets highest priority, then within each row, left to right
+			// Formula: row * totalColumns + col
+			// This gives us: 1, 4, 7 (top row), then 2, 5, 8 (second row), etc.
+			int priority = row * location.LockersPerColumn + col;
+			
+			return priority;
+		}
+
+		return int.MaxValue; // If unable to parse, put at end
+	}
+
+	private int CalculateLockerRowIndex(Locker locker, Location location)
+	{
+		// Parse locker number to get its index
+		var numberPart = locker.Number;
+		if (!string.IsNullOrEmpty(location.Prefix))
+		{
+			numberPart = locker.Number.Replace(location.Prefix, "");
+		}
+
+		if (int.TryParse(numberPart, out int lockerIndex))
+		{
+			// Convert to 0-based index
+			lockerIndex = lockerIndex - 1;
+			
+			// Calculate row index: higher lockers have lower row indices (0 = top/highest)
+			int rowIndex = lockerIndex / location.LockersPerColumn;
+			return rowIndex;
+		}
+
+		return int.MaxValue; // If unable to parse, put at end
+	}
+
+	private Color GetYearPriorityColor(int year)
+	{
+		return year switch
+		{
+			6 => Color.Error,      // Highest priority - red
+			5 => Color.Warning,    // High priority - orange  
+			4 => Color.Info,       // Medium-high priority - blue
+			3 => Color.Primary,    // Medium priority - purple
+			2 => Color.Success,    // Lower priority - green
+			1 => Color.Secondary,  // Lowest priority - grey
+			_ => Color.Default
+		};
+	}
+
+	private string GetYearPriorityText(int year)
+	{
+		return year switch
+		{
+			6 => "6th Year (Highest)",
+			5 => "5th Year (High)",
+			4 => "4th Year (Med-High)",
+			3 => "3rd Year (Medium)",
+			2 => "2nd Year (Low)",
+			1 => "1st Year (Lowest)",
+			_ => $"{year}th Year"
+		};
+	}
+
+	private string GetLockerNumber(Location location, int index)
+	{
+		var prefix = string.IsNullOrEmpty(location.Prefix) ? "" : location.Prefix;
+		return $"{prefix}{index:D3}";
+	}
+
+	private string GetPriorityBackgroundColor(int year)
+	{
+		return year switch
+		{
+			6 => "rgba(244, 67, 54, 0.1)",    // Light red background
+			5 => "rgba(255, 152, 0, 0.1)",    // Light orange background
+			4 => "rgba(33, 150, 243, 0.1)",   // Light blue background
+			3 => "rgba(156, 39, 176, 0.1)",   // Light purple background
+			2 => "rgba(76, 175, 80, 0.1)",    // Light green background
+			1 => "rgba(158, 158, 158, 0.1)",  // Light grey background
+			_ => "var(--mud-palette-surface)"
+		};
+	}
+
+	private bool SearchFunc(KeyValuePair<Student, Locker> assignment)
+	{
+		if (string.IsNullOrWhiteSpace(_assignmentSearchString))
+			return true;
+
+		var student = assignment.Key;
+		var locker = assignment.Value;
+		var location = _locations.FirstOrDefault(l => l.ID == locker.LocationID);
+
+		return student.Name.Contains(_assignmentSearchString, StringComparison.OrdinalIgnoreCase) ||
+			   student.LastName.Contains(_assignmentSearchString, StringComparison.OrdinalIgnoreCase) ||
+			   student.Class.Contains(_assignmentSearchString, StringComparison.OrdinalIgnoreCase) ||
+			   student.Email.Contains(_assignmentSearchString, StringComparison.OrdinalIgnoreCase) ||
+			   locker.Number.Contains(_assignmentSearchString, StringComparison.OrdinalIgnoreCase) ||
+			   (location?.Name.Contains(_assignmentSearchString, StringComparison.OrdinalIgnoreCase) ?? false);
 	}
 }
