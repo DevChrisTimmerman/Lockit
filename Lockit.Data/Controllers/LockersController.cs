@@ -20,6 +20,17 @@ public class LockersController : Controller
 		return Ok(await _lockerRepository.GetAllLockersAsync());
 	}
 
+	[HttpGet("location/{locationId}")]
+	public async Task<IActionResult> GetLockersByLocationId(int locationId)
+	{
+		var lockers = await _lockerRepository.GetLockersByLocationIdAsync(locationId);
+		if (lockers == null || !lockers.Any())
+		{
+			return NotFound();
+		}
+		return Ok(lockers);
+	}
+
 	[HttpGet("{lockerId}")]
 	public async Task<IActionResult> GetLockerById(int lockerId)
 	{
@@ -51,6 +62,17 @@ public class LockersController : Controller
 		}
 		var createdLocker = await _lockerRepository.AddLockerAsync(locker);
 		return CreatedAtAction(nameof(GetLockerById), new { lockerId = createdLocker.ID }, createdLocker);
+	}
+
+	[HttpPost("batch")]
+	public async Task<IActionResult> AddLockersBatch(List<Locker> lockers)
+	{
+		if (lockers == null || !lockers.Any())
+		{
+			return BadRequest("Locker list is null or empty.");
+		}
+		var createdLockers = await _lockerRepository.AddLockersBatchAsync(lockers);
+		return CreatedAtAction(nameof(GetAllLockers), new { }, createdLockers);
 	}
 
 	[HttpPut("{lockerId}")]

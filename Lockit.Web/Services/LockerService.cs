@@ -31,6 +31,19 @@ public class LockerService
 		}
 	}
 
+	public async Task<List<Locker>> GetLockersByLocationIdAsync(int locationId)
+	{
+		var response = await _httpClient.GetAsync($"api/lockers/location/{locationId}");
+		switch (response.StatusCode)
+		{
+			case HttpStatusCode.OK:
+				return await response.Content.ReadFromJsonAsync<List<Locker>>();
+			default:
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while fetching lockers by location ID. Status: {response.StatusCode}, Content: {errorContent}");
+		}
+	}
+
 	public async Task<Locker?> GetLockerByIdAsync(int lockerId)
 	{
 		var response = await _httpClient.GetAsync($"api/lockers/{lockerId}");
@@ -67,6 +80,19 @@ public class LockerService
 			default:
 				var errorContent = await response.Content.ReadAsStringAsync();
 				throw new Exception($"An error occurred while adding a locker. Status: {response.StatusCode}, Content: {errorContent}");
+		}
+	}
+
+	public async Task<List<Locker>> AddLockersBatchAsync(IEnumerable<Locker> lockers)
+	{
+		var response = await _httpClient.PostAsJsonAsync("api/lockers/batch", lockers, _jsonSerializerOptions);
+		switch (response.StatusCode)
+		{
+			case HttpStatusCode.Created:
+				return await response.Content.ReadFromJsonAsync<List<Locker>>();
+			default:
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while adding lockers. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 

@@ -1,5 +1,6 @@
 ﻿using Lockit.Models;
 using System.Net;
+using System.Text.Json;
 
 namespace Lockit.Web.Services;
 
@@ -35,6 +36,32 @@ public class StudentService
 			default:
 				var errorContent = await response.Content.ReadAsStringAsync();
 				throw new Exception($"An error occurred while fetching the student. Status: {response.StatusCode}, Content: {errorContent}");
+		}
+	}
+
+	public async Task<Student> AddStudentAsync(Student student)
+	{
+		var response = await _httpClient.PostAsJsonAsync("api/students", student);
+		switch (response.StatusCode)
+		{
+			case HttpStatusCode.Created:
+				return await response.Content.ReadFromJsonAsync<Student>();
+			default:
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while adding the student. Status: {response.StatusCode}, Content: {errorContent}");
+		}
+	}
+
+	public async Task<List<Student>> AddStudentsBatchAsync(IEnumerable<Student> students)
+	{
+		var response = await _httpClient.PostAsJsonAsync("api/students/batch", students);
+		switch (response.StatusCode)
+		{
+			case HttpStatusCode.Created:
+				return await response.Content.ReadFromJsonAsync<List<Student>>();
+			default:
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while adding students. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
 }

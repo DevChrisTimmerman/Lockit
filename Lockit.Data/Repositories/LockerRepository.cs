@@ -18,6 +18,11 @@ public class LockerRepository : ILockerRepository
 		return await _context.Lockers.Include(l => l.Location).Include(l => l.Student).ToListAsync();
 	}
 
+	public async Task<List<Locker>> GetLockersByLocationIdAsync(int locationId)
+	{
+		return await _context.Lockers.Include(l => l.Location).Where(l => l.LocationID == locationId).ToListAsync();
+	}
+
 	public async Task<Locker?> GetLockerByIdAsync(int lockerId)
 	{
 		return await _context.Lockers.Include(l => l.Location).Include(l => l.Student).FirstOrDefaultAsync(l => l.ID == lockerId);
@@ -37,6 +42,18 @@ public class LockerRepository : ILockerRepository
 		await _context.SaveChangesAsync();
 		return result.Entity;
 	}
+
+	public async Task<IEnumerable<Locker>> AddLockersBatchAsync(IEnumerable<Locker> lockers)
+	{
+		foreach (Locker locker in lockers)
+		{
+			locker.Location = null;
+		}
+		await _context.Lockers.AddRangeAsync(lockers);
+		await _context.SaveChangesAsync();
+		return lockers;
+	}
+
 
 	public async Task<Locker> UpdateLockerAsync(Locker locker)
 	{

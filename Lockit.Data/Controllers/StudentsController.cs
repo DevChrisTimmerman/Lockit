@@ -1,4 +1,5 @@
 ﻿using Lockit.Data.Repositories;
+using Lockit.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lockit.Data.Controllers;
@@ -29,5 +30,28 @@ public class StudentsController : Controller
 			return NotFound();
 		}
 		return Ok(student);
+	}
+
+	[HttpPost]
+	public async Task<IActionResult> AddStudent(Student student)
+	{
+		if (student == null)
+		{
+			return BadRequest();
+		}
+
+		var addedStudent = await _studentRepository.AddStudentAsync(student);
+		return CreatedAtAction(nameof(GetStudentById), new { studentId = addedStudent.ID }, addedStudent);
+	}
+
+	[HttpPost("batch")]
+	public async Task<IActionResult> AddStudentsBatch(IEnumerable<Student> students)
+	{
+		if (students == null || !students.Any())
+		{
+			return BadRequest("Student list is null or empty.");
+		}
+		var addedStudents = await _studentRepository.AddStudentBatchAsync(students);
+		return CreatedAtAction(nameof(GetAllStudents), addedStudents);
 	}
 }
