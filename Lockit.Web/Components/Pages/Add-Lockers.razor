@@ -1,0 +1,678 @@
+﻿@page "/add-lockers"
+
+<MudStepper ShowResetButton OnPreviewInteraction="OnPreviewInteraction">
+	<ChildContent>
+		<MudStep Title="Mode selection" HasError="@_locationsStepHasErrors">
+			
+			@if (!_modeSelected)
+			{
+				<MudGrid Justify="Justify.Center" Class="pa-8">
+					<MudItem>
+						<MudStack Spacing="4">
+							<MudText Typo="Typo.h6" Align="Align.Center">Choose how you want to add lockers:</MudText>
+							<MudStack Row Justify="Justify.Center" Spacing="4">
+								<MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="() => SelectMode(true)" Size="Size.Large">
+									Add to existing location
+								</MudButton>
+								<MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.AddLocation" OnClick="() => SelectMode(false)" Size="Size.Large">
+									Add to new location
+								</MudButton>
+							</MudStack>
+						</MudStack>
+					</MudItem>
+				</MudGrid>
+			}
+			else
+			{
+				<MudGrid Justify="Justify.FlexStart" Class="mb-4">
+					<MudItem>
+						<MudChip T="string" 
+								 Color="@(_addToExistingLocation ? Color.Primary : Color.Secondary)" 
+								 Icon="@(_addToExistingLocation ? Icons.Material.Filled.Add : Icons.Material.Filled.AddLocation)">
+							@(_addToExistingLocation ? "Adding to existing locations" : "Creating new locations")
+						</MudChip>
+						<MudButton Variant="Variant.Text" 
+								   Color="Color.Info" 
+								   StartIcon="@Icons.Material.Filled.ArrowBack"
+								   OnClick="ResetModeSelection"
+								   Size="Size.Small"
+								   Class="ml-2">
+							Change
+						</MudButton>
+					</MudItem>
+				</MudGrid>
+
+				@if (_addToExistingLocation)
+				{
+					@if (_existingLocations.Any())
+					{
+						<MudText Typo="Typo.subtitle1" Class="mb-4">Select existing locations to add lockers to:</MudText>
+						@foreach (var existingLoc in _existingLocations)
+						{
+							<MudPaper Elevation="3">
+								<MudGrid Justify="Justify.FlexStart" Spacing="2" Class="pa-2 ma-4" AlignItems="AlignItems.Center">
+									<MudItem xs="1">
+										<MudCheckBox @bind-Value="existingLoc.IsSelected" Color="Color.Primary"/>
+									</MudItem>
+									<MudItem xs="1">
+										<MudTextField Label="Prefix" ReadOnly @bind-Value="@existingLoc.Location.Prefix" Variant="Variant.Filled" />
+									</MudItem>
+									<MudItem xs="3">
+										<MudTextField Label="Name" ReadOnly @bind-Value="@existingLoc.Location.Name" Variant="Variant.Filled"/>
+									</MudItem>
+									<MudItem xs="5">
+										<MudTextField Label="Description" ReadOnly @bind-Value="@existingLoc.Location.Description" Variant="Variant.Filled"/>
+									</MudItem>
+									<MudItem xs="1" Style="align-content:center">
+										<MudText>Current: @existingLoc.Location.LockerCount</MudText>
+									</MudItem>
+								</MudGrid>
+							</MudPaper>
+						}
+					}
+					else
+					{
+						<MudAlert Severity="Severity.Info">No existing locations found. Please create a new location instead.</MudAlert>
+					}
+				}
+				else
+				{
+					@foreach (var loc in _locations)
+					{
+						<MudPaper Elevation="3">
+							<MudGrid Justify="Justify.FlexStart" Spacing="4" Class="ma-4">
+								<MudItem xs="1">
+									<MudTooltip ShowOnFocus Arrow Placement="Placement.Top" Text="Leave empty if no Prefix is wanted" Color="Color.Primary">
+										<MudTextField Variant="Variant.Outlined" T="string" Label="Prefix" @bind-Value="@loc.Prefix"/>
+									</MudTooltip>
+								</MudItem>
+								<MudItem xs="3">
+									<MudTextField Variant="Variant.Outlined" T="string" Required Label="Name" @bind-Value="@loc.Name"/>
+								</MudItem>
+								<MudItem xs="7">
+									<MudTextField Variant="Variant.Outlined" T="string" Label="Description" @bind-Value="@loc.Description" AutoGrow MaxLines="3" HelperText="Leave empty if no Description is needed" HelperTextOnFocus/>
+								</MudItem>
+							</MudGrid>
+						</MudPaper>
+					}
+					<MudGrid Justify="Justify.FlexEnd">
+						<MudItem>
+							<MudIconButton Icon="@Icons.Material.Filled.AddCircle" OnClick="AddLocation" Color="Color.Success"/>
+							<MudIconButton Disabled="_locations.Count < 2" Icon="@Icons.Material.Filled.Cancel" OnClick="RemoveLocation" Color="Color.Secondary"/>
+						</MudItem>
+					</MudGrid>
+				}
+			}
+		</MudStep>
+		<MudStep Title="Setup locker amounts" HasError="@_locationsAmountsHasError">
+			<MudChip T="string" Color=Color.Primary>Setup locker amounts</MudChip>
+			@if (_addToExistingLocation)
+			{
+				@foreach (var existingLoc in _existingLocations.Where(x => x.IsSelected))
+				{
+					<MudPaper Elevation="3">
+						<MudStack Class="ma-4 pa-4" Row AlignItems="AlignItems.Center">
+							<MudGrid Justify="Justify.FlexStart" Spacing="4">
+								<MudItem xs="1">
+									<MudTextField Label="Prefix" ReadOnly @bind-Value="@existingLoc.Location.Prefix" Variant="Variant.Filled" />
+								</MudItem>
+								<MudItem xs="4">
+									<MudTextField Label="Name" ReadOnly @bind-Value="@existingLoc.Location.Name" Variant="Variant.Filled"/>
+								</MudItem>
+								<MudSpacer/>
+								<MudItem Style="align-content: center" xs="1">
+									<MudIcon Size="Size.Large" Icon="@Icons.Material.TwoTone.ArrowRightAlt"/>
+								</MudItem>
+								<MudSpacer/>
+								<MudItem xs="2">
+									<MudTextField Variant="Variant.Outlined" Required T="int" Label="Additional lockers" @bind-Value="@existingLoc.AdditionalLockerCount" For="@(() => existingLoc.AdditionalLockerCount)" Error="@(existingLoc.AdditionalLockerCount == 0)"/>
+								</MudItem>
+								<MudItem xs="2">
+									<MudTextField Variant="Variant.Filled" ReadOnly T="int" Label="Lockers per column" @bind-Value="@existingLoc.LockersPerColumn" For="@(() => existingLoc.LockersPerColumn)" Error="@(existingLoc.LockersPerColumn == 0 || (existingLoc.AdditionalLockerCount % existingLoc.LockersPerColumn != 0))" ErrorText="Additional locker count should be divisible by Lockers per Column!" />
+								</MudItem>
+							</MudGrid>
+						</MudStack>
+					</MudPaper>
+				}
+			}
+			else
+			{
+				@for (int i = 0; i < _locations.Count; i++)
+				{
+					var loc = _locations[i];
+					int index = i;
+					<MudPaper Elevation="3">
+						<MudStack Class="ma-4 pa-4" Row AlignItems="AlignItems.Center">
+							<MudGrid Justify="Justify.FlexStart" Spacing="4" >
+								<MudItem xs="1">
+									<MudTextField Label="Prefix" ReadOnly @bind-Value="@loc.Prefix" Variant="Variant.Filled" />
+								</MudItem>
+								<MudItem xs="4">
+									<MudTextField Label="Name" ReadOnly @bind-Value="@loc.Name" Variant="Variant.Filled"/>
+								</MudItem>
+								<MudSpacer/>
+								<MudItem Style="align-content: center" xs="1">
+									<MudIcon Size="Size.Large" Icon="@Icons.Material.TwoTone.ArrowRightAlt"/>
+								</MudItem>
+								<MudSpacer/>
+								<MudItem xs="2">
+									<MudTextField Variant="Variant.Outlined" Required T="int" Label="Total lockers" @bind-Value="@loc.LockerCount" For="@(() => loc.LockerCount)" Error="@(loc.LockerCount == 0)"/>
+								</MudItem>
+								<MudItem xs="2">
+									<MudTextField Variant="Variant.Outlined" Required T="int" Label="Lockers per column" @bind-Value="@loc.LockersPerColumn" For="@(() => loc.LockersPerColumn)" Error="@(loc.LockersPerColumn == 0 || (loc.LockerCount % loc.LockersPerColumn != 0))" ErrorText="Total locker count should be divisable by Lockers perColumn!" />
+								</MudItem>
+							</MudGrid>
+						</MudStack>
+					</MudPaper>
+				}
+			}
+		</MudStep>
+		<MudStep Title="Overview">
+			@if (_completed == false)
+			{
+				<MudChip T="string" Color=Color.Primary>Overview</MudChip>
+				<MudGrid Class="pa-10" Justify="Justify.SpaceEvenly">
+					@if (_addToExistingLocation)
+					{
+						@foreach (var existingLoc in _existingLocations.Where(x => x.IsSelected))
+						{
+							<MudPaper Elevation="3" Class="pa-4 ma-2">
+								<MudGrid>
+									<MudItem Style="width: auto; min-width: 100px">
+										<MudText>@existingLoc.Location.Name </MudText>
+										<MudText>Prefix: @existingLoc.Location.Prefix </MudText>
+									</MudItem>
+									<MudItem>
+										<MudDivider Vertical/>
+									</MudItem>
+									<MudItem>
+										<MudText>Current: @existingLoc.Location.LockerCount </MudText>
+										<MudText>Adding: @existingLoc.AdditionalLockerCount </MudText>
+										<MudText>Per Column: @existingLoc.LockersPerColumn </MudText>
+									</MudItem>
+								</MudGrid>
+								<MudItem Class="mt-4">
+									<MudStack Row Justify="Justify.Center">
+										@{
+											var index = _existingLocations.Where(x => x.IsSelected).ToList().IndexOf(existingLoc);
+											var newLockers = _previewLocationLockers[index];
+											var existingLockers = _existingLocationLockers[index];
+											var columns = existingLoc.LockersPerColumn;
+											var totalRows = (existingLoc.Location.LockerCount + existingLoc.AdditionalLockerCount) / columns;
+											var existingRows = existingLoc.Location.LockerCount / columns;
+											var newRows = existingLoc.AdditionalLockerCount / columns;
+
+											// Display existing lockers first
+											@for (var rowIndex = 0; rowIndex < existingRows; rowIndex++)
+											{
+												var index1 = rowIndex;
+												<MudStack>
+													@for (var colIdx = 0; colIdx < columns; colIdx++)
+													{
+														var lockerIdx = index1 * columns + colIdx;
+														<MudPaper Outlined Class="pa-1 ma-n1 border-1 mud-border-dark" Style="background-color: #D3D3D3;">
+															@existingLockers[lockerIdx].Number
+														</MudPaper>
+													}
+												</MudStack>
+											}
+
+											// Display new lockers with gradient colors
+											@for (var rowIndex = 0; rowIndex < newRows; rowIndex++)
+											{
+												var index1 = rowIndex;
+												<MudStack>
+													@for (var colIdx = 0; colIdx < columns; colIdx++)
+													{
+														var lockerIdx = index1 * columns + colIdx;
+														// Calculate gradient position based on row and column
+														double percent = ((index1 + colIdx) * 1.0) / (newRows + columns - 2);
+														int r = (int)(90 + percent * (52 - 90));
+														int g = (int)(200 + percent * (199 - 200));
+														int b = (int)(250 + percent * (89 - 250));
+														string bgColor = $"rgb({r},{g},{b})";
+														<MudPaper Outlined  Class="pa-1 ma-n1 border-1 mud-border-dark" Style="@($"background-color: {bgColor};")">
+															@newLockers[lockerIdx].Number
+														</MudPaper>
+													}
+												</MudStack>
+											}
+										}
+									</MudStack>
+								</MudItem>
+							</MudPaper>
+						}
+					}
+					else
+					{
+						@for (var i = 0; i < _locations.Count; i++)
+						{
+							var loc = _locations[i];
+							int index = i;
+							<MudPaper Elevation="3" Class="pa-4 ma-2">
+								<MudGrid>
+									<MudItem Style="width: auto; min-width: 100px">
+										<MudText>@loc.Name </MudText>
+										<MudText>Prefix: @loc.Prefix </MudText>
+									</MudItem>
+									<MudItem>
+										<MudDivider Vertical/>
+									</MudItem>
+									<MudItem>
+										<MudText>Total: @loc.LockerCount </MudText>
+										<MudText>Per Column: @loc.LockersPerColumn </MudText>
+									</MudItem>
+								</MudGrid>
+								<MudItem Class="mt-4">
+									<MudStack Row Justify="Justify.Center">
+										@{
+											var lockers = _previewLocationLockers[index];
+											var columns = loc.LockersPerColumn;
+											var rows = loc.LockerCount / columns;
+											@for (var rowIndex = 0; rowIndex < rows; rowIndex++)
+											{
+												var index1 = rowIndex;
+												<MudStack>
+													@for (var colIdx = 0; colIdx < columns; colIdx++)
+													{
+														var lockerIdx = index1 * columns + colIdx;
+														// Calculate gradient position based on row and column
+														double percent = ((index1 + colIdx) * 1.0) / (rows + columns - 2);
+													// Interpolate between two colors (blue and green)
+													// int r = (int)(0 + percent * (0 - 0));
+													// int g = (int)(123 + percent * (255 - 123));
+													// int b = (int)(255 + percent * (0 - 255));
+														int r = (int)(90 + percent * (52 - 90));
+														int g = (int)(200 + percent * (199 - 200));
+														int b = (int)(250 + percent * (89 - 250));
+														string bgColor = $"rgb({r},{g},{b})";
+														<MudPaper Outlined  Class="pa-1 ma-n1 border-1 mud-border-dark" Style="@($"background-color: {bgColor};")">
+															@lockers[lockerIdx].Number
+														</MudPaper>
+													}
+												</MudStack>
+											}
+										}
+									</MudStack>
+								</MudItem>
+							</MudPaper>
+						}
+					}
+				</MudGrid>
+			}
+		</MudStep>
+
+		@if (_completed)
+		{
+			<MudGrid Justify="Justify.Center">
+				<MudItem>
+					@if (_isDBrequestProcessed)
+					{
+						<MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+						<MudText Class="ma-20">New lockers added! <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" /></MudText>
+						</MudStack>
+					}
+					else
+					{
+						<div class="loader">
+							<div class="box box0"><div></div></div>
+							<div class="box box1"><div></div></div>
+							<div class="box box2"><div></div></div>
+							<div class="box box3"><div></div></div>
+							<div class="box box4"><div></div></div>
+							<div class="box box5"><div></div></div>
+							<div class="box box6"><div></div></div>
+							<div class="box box7"><div></div></div>
+							<div class="ground"><div></div></div>
+						</div>
+					}
+				</MudItem>
+			</MudGrid>
+		}
+	</ChildContent>
+</MudStepper>
+
+@code {
+	[Inject] 
+	public IDialogService DialogService { get; set; }
+	[Inject]
+	public LocationService LocationService { get; set; }
+	[Inject]
+	public LockerService LockerService { get; set; }
+	[Inject]
+	public AppStateService AppStateService { get; set; }
+
+	// Existing variables
+	private List<Location> _locations = new List<Location>();
+	private List<List<Locker>> _previewLocationLockers = new List<List<Locker>>();
+	private bool _locationsStepHasErrors = false;
+	private bool _locationsAmountsHasError = false;
+	private bool _isDBrequestProcessed;
+	private bool _completed;
+
+	// New variables for mode selection
+	private bool _modeSelected = false;
+	private bool _addToExistingLocation = false;
+	private List<ExistingLocationSelection> _existingLocations = new List<ExistingLocationSelection>();
+	
+	// Add new variable for existing lockers
+	private List<List<Locker>> _existingLocationLockers = new List<List<Locker>>();
+
+	protected override async Task OnInitializedAsync()
+	{
+		// Initialize with one default location
+		AddLocation();
+
+		//Populate existing locations with location service
+		var existingLocs = await LocationService.GetAllLocationsAsync();
+		foreach (var loc in existingLocs)
+		{
+			_existingLocations.Add(new ExistingLocationSelection
+			{
+				Location = loc,
+				IsSelected = false,
+				AdditionalLockerCount = 0,
+				LockersPerColumn = loc.LockersPerColumn
+			});
+		}
+	}
+
+	private async Task SelectMode(bool addToExisting)
+	{
+		_addToExistingLocation = addToExisting;
+		_modeSelected = true;
+
+		if (addToExisting && _existingLocations.Any() == false)
+		{
+			await DialogService.ShowMessageBox("Info", "No existing locations found. Switching to create new location mode.");
+			_addToExistingLocation = false;
+		}
+	}
+
+	private void ResetModeSelection()
+	{
+		_modeSelected = false;
+		_addToExistingLocation = false;
+		// Reset selections
+		foreach (var existingLoc in _existingLocations)
+		{
+			existingLoc.IsSelected = false;
+			existingLoc.AdditionalLockerCount = 0;
+			existingLoc.LockersPerColumn = existingLoc.LockersPerColumn;
+		}
+	}
+
+	private void AddLocation()
+	{
+		_locations.Add(new Location());
+	}
+
+	private void RemoveLocation()
+	{
+		_locations.RemoveAt(_locations.Count - 1);
+	}
+
+	private async Task OnPreviewInteraction(StepperInteractionEventArgs arg)
+	{
+		switch (arg.Action)
+		{
+			case StepAction.Complete:
+				// occurs when clicking next
+				await ControlStepCompletion(arg);
+				break;
+			case StepAction.Activate:
+				// occurs when clicking a step header with the mouse
+				//await ControlStepNavigation(arg);
+				break;
+			case StepAction.Reset:
+				// occurs when clicking the reset button
+				ResetPreviewLocationLocker();
+				ResetModeSelection();
+				break;
+			case StepAction.Skip:
+				// occurs when clicking the skip button
+				break;
+		}
+	}
+
+	private void ResetPreviewLocationLocker()
+	{
+		_previewLocationLockers.Clear();
+		_existingLocationLockers.Clear();
+	}
+
+	private async Task ControlStepCompletion(StepperInteractionEventArgs arg)
+	{
+		switch (arg.StepIndex) {
+			case 0:
+				if (!_modeSelected)
+				{
+					await DialogService.ShowMessageBox("Error", "Please select a mode first");
+					arg.Cancel = true;
+					return;
+				}
+
+				if (_addToExistingLocation)
+				{
+					if (!_existingLocations.Any(x => x.IsSelected))
+					{
+						await DialogService.ShowMessageBox("Error", "Please select at least one existing location");
+						arg.Cancel = true;
+					}
+				}
+				else
+				{
+					if (ValidateLocations() == false)
+					{
+						await DialogService.ShowMessageBox("Error", "Name field is required");
+						arg.Cancel = true;
+					}
+				}
+				break;
+			case 1:
+				if (_addToExistingLocation)
+				{
+					if (ValidateExistingLocationAmounts())
+					{
+						await SetupExistingLocationPreviewList();
+					}
+					else
+					{
+						await DialogService.ShowMessageBox("Error", "Please enter valid additional locker counts for all selected locations");
+						arg.Cancel = true;
+					}
+				}
+				else
+				{
+					if (ValidateLockerAmounts())
+					{
+						SetupLockerLocationPreviewList();
+					}
+					else
+					{
+						await DialogService.ShowMessageBox("Error", "Please enter valid locker counts for all locations, \r\n The total locker counter per location should be divisible by column count");
+						arg.Cancel = true;
+					}
+				}
+				break;
+			case 2:
+				_completed = true;
+				StateHasChanged();
+				await FinalizeSetup();
+				break;
+		}
+	}
+
+	private bool ValidateExistingLocationAmounts()
+	{
+		foreach (var existingLoc in _existingLocations.Where(x => x.IsSelected))
+		{
+			if (existingLoc.AdditionalLockerCount == 0 || existingLoc.LockersPerColumn == 0)
+			{
+				_locationsAmountsHasError = true;
+				return false;
+			}
+
+			if (existingLoc.AdditionalLockerCount % existingLoc.LockersPerColumn != 0)
+			{
+				_locationsAmountsHasError = true;
+				return false;
+			}
+		}
+
+		_locationsAmountsHasError = false;
+		return true;
+	}
+
+	private async Task SetupExistingLocationPreviewList()
+	{
+		_previewLocationLockers.Clear();
+		_existingLocationLockers.Clear();
+		var currentLockerCount = 0;
+
+		foreach (var existingLoc in _existingLocations.Where(x => x.IsSelected))
+		{
+			// Get existing lockers for this location
+			var existingLockers = await LockerService.GetLockersByLocationIdAsync(existingLoc.Location.ID);
+			_existingLocationLockers.Add(existingLockers);
+
+			// Create new lockers list
+			_previewLocationLockers.Add(new List<Locker>());
+			
+			// Get the highest existing locker number for this location
+			// For now, we'll use the current locker count as the starting point
+			var startingNumber = existingLoc.Location.LockerCount + 1;
+			
+			for (int j = 0; j < existingLoc.AdditionalLockerCount; j++)
+			{
+				Locker locker = new Locker
+				{
+					Number = existingLoc.Location.Prefix + (startingNumber + j).ToString("D3"),
+					LocationID = existingLoc.Location.ID,
+					Status = Enums.LockerStatus.Available
+				};
+				_previewLocationLockers[currentLockerCount].Add(locker);
+			}
+			currentLockerCount++;
+		}
+	}
+
+	private bool ValidateLocations()
+	{
+		foreach (var loc in _locations)
+		{
+			if (string.IsNullOrWhiteSpace(loc.Name))
+			{
+				_locationsStepHasErrors = true;
+				return false;
+			}
+		}
+
+		_locationsStepHasErrors = false;
+		return true;
+	}
+
+	private bool ValidateLockerAmounts()
+	{
+		foreach (var loc in _locations)
+		{
+			if (loc.LockerCount == 0 || loc.LockersPerColumn == 0)
+			{
+				_locationsAmountsHasError = true;
+				return false;
+			}
+
+			if (loc.LockerCount % loc.LockersPerColumn != 0)
+			{
+				_locationsAmountsHasError = true;
+				return false;
+			}
+		}
+
+		_locationsAmountsHasError = false;
+		return true;
+	}
+
+	private void SetupLockerLocationPreviewList()
+	{
+		//Set the lockers per column for each location
+		for (var i = 0; i < _locations.Count; i++)
+		{
+			_previewLocationLockers.Add(new List<Locker>());
+			for (int j = 0; j < _locations[i].LockerCount; j++)
+			{
+				Locker locker = new Locker
+				{
+					Number = _locations[i].Prefix + (j + 1).ToString("D3"),
+					//Location = _locations[i],
+					LocationID = _locations[i].ID,
+					//StudentID = null,
+					//Student = null,
+					Status = Enums.LockerStatus.Available
+				};
+				_previewLocationLockers[i].Add(locker);
+			}
+		}
+	}
+
+	private async Task<bool> FinalizeSetup()
+	{
+		if (_addToExistingLocation)
+		{
+			// Handle adding lockers to existing locations
+			var selectedLocations = _existingLocations.Where(x => x.IsSelected).ToList();
+			for (var i = 0; i < selectedLocations.Count; i++)
+			{
+				var existingLoc = selectedLocations[i];
+				var locationLockers = _previewLocationLockers[i];
+				
+				// Update the location's locker count
+				existingLoc.Location.LockerCount += existingLoc.AdditionalLockerCount;
+				await LocationService.UpdateLocationAsync(existingLoc.Location);
+				
+				// Add the new lockers
+				foreach (var locker in locationLockers)
+				{
+					locker.LocationID = existingLoc.Location.ID;
+					locker.Location = existingLoc.Location;
+				}
+				await LockerService.AddLockersBatchAsync(locationLockers);
+			}
+		}
+		else
+		{
+			// Handle creating new locations (existing logic)
+			foreach (var loc in _locations)
+			{
+				Location addedLocation = (await LocationService.AddLocationAsync(loc))!;
+				loc.ID = addedLocation.ID;
+			}
+
+			for (var i = 0; i < _previewLocationLockers.Count; i++)
+			{
+				var locationLockers = _previewLocationLockers[i];
+				var newLoc = (await LocationService.GetLocationByIdAsync(_locations[i].ID))!;
+				for (var j = 0; j < locationLockers.Count; j++)
+				{
+					locationLockers[j].LocationID = newLoc.ID;
+					locationLockers[j].Location = newLoc;
+				}
+				await LockerService.AddLockersBatchAsync(locationLockers);
+			}
+		}
+
+		//wait 3 seconds so the animation can be seen :)
+		await Task.Delay(3000);
+		_isDBrequestProcessed = true;
+		return true;
+	}
+
+	// Helper class for existing location selection
+	public class ExistingLocationSelection
+	{
+		public Location Location { get; set; } = new();
+		public bool IsSelected { get; set; }
+		public int AdditionalLockerCount { get; set; }
+		public int LockersPerColumn { get; set; } = 1;
+	}
+}
