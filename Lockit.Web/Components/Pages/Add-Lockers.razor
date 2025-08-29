@@ -159,7 +159,7 @@
 									<MudTextField Variant="Variant.Outlined" Required T="int" Label="Total lockers" @bind-Value="@loc.LockerCount" For="@(() => loc.LockerCount)" Error="@(loc.LockerCount == 0)"/>
 								</MudItem>
 								<MudItem xs="2">
-									<MudTextField Variant="Variant.Outlined" Required T="int" Label="Lockers per column" @bind-Value="@loc.LockersPerColumn" For="@(() => loc.LockersPerColumn)" Error="@(loc.LockersPerColumn == 0 || (loc.LockerCount % loc.LockersPerColumn != 0))" ErrorText="Total locker count should be divisable by Lockers perColumn!" />
+									<MudTextField Variant="Variant.Outlined" Required T="int" Label="Lockers per column" @bind-Value="@loc.LockersPerColumn" For="@(() => loc.LockersPerColumn)" Error="@(loc.LockersPerColumn == 0 || (loc.LockerCount % loc.LockersPerColumn != 0))" ErrorText="Total locker count should be divisible by Lockers perColumn!" />
 								</MudItem>
 							</MudGrid>
 						</MudStack>
@@ -170,7 +170,7 @@
 		<MudStep Title="Overview">
 			@if (_completed == false)
 			{
-				<MudChip T="string" Color=Color.Primary>Overview</MudChip>
+				<MudChip T="string" Color="Color.Primary">Overview</MudChip>
 				<MudGrid Class="pa-10" Justify="Justify.SpaceEvenly">
 					@if (_addToExistingLocation)
 					{
@@ -197,19 +197,19 @@
 											var index = _existingLocations.Where(x => x.IsSelected).ToList().IndexOf(existingLoc);
 											var newLockers = _previewLocationLockers[index];
 											var existingLockers = _existingLocationLockers[index];
-											var columns = existingLoc.LockersPerColumn;
-											var totalRows = (existingLoc.Location.LockerCount + existingLoc.AdditionalLockerCount) / columns;
-											var existingRows = existingLoc.Location.LockerCount / columns;
-											var newRows = existingLoc.AdditionalLockerCount / columns;
+											// rows = lockers per column (vertical count), cols = number of columns
+											var rows = existingLoc.LockersPerColumn;
+											var existingCols = existingLoc.Location.LockerCount / rows;
+											var newCols = existingLoc.AdditionalLockerCount / rows;
 
-											// Display existing lockers first
-											@for (var rowIndex = 0; rowIndex < existingRows; rowIndex++)
+											// Display existing lockers first (by columns)
+											@for (var col = 0; col < existingCols; col++)
 											{
-												var index1 = rowIndex;
+												var c = col;
 												<MudStack>
-													@for (var colIdx = 0; colIdx < columns; colIdx++)
+													@for (var row = 0; row < rows; row++)
 													{
-														var lockerIdx = index1 * columns + colIdx;
+														var lockerIdx = c * rows + row;
 														<MudPaper Outlined Class="pa-1 ma-n1 border-1 mud-border-dark" Style="background-color: #D3D3D3;">
 															@existingLockers[lockerIdx].Number
 														</MudPaper>
@@ -217,16 +217,16 @@
 												</MudStack>
 											}
 
-											// Display new lockers with gradient colors
-											@for (var rowIndex = 0; rowIndex < newRows; rowIndex++)
+											// Display new lockers with gradient colors (by columns)
+											@for (var col = 0; col < newCols; col++)
 											{
-												var index1 = rowIndex;
+												var c = col;
 												<MudStack>
-													@for (var colIdx = 0; colIdx < columns; colIdx++)
+													@for (var row = 0; row < rows; row++)
 													{
-														var lockerIdx = index1 * columns + colIdx;
-														// Calculate gradient position based on row and column
-														double percent = ((index1 + colIdx) * 1.0) / (newRows + columns - 2);
+														var lockerIdx = c * rows + row;
+														// Calculate gradient position based on column and row
+														double percent = ((row + c) * 1.0) / (Math.Max(1, newCols + rows - 2));
 														int r = (int)(90 + percent * (52 - 90));
 														int g = (int)(200 + percent * (199 - 200));
 														int b = (int)(250 + percent * (89 - 250));
@@ -267,21 +267,18 @@
 									<MudStack Row Justify="Justify.Center">
 										@{
 											var lockers = _previewLocationLockers[index];
-											var columns = loc.LockersPerColumn;
-											var rows = loc.LockerCount / columns;
-											@for (var rowIndex = 0; rowIndex < rows; rowIndex++)
+											// rows = lockers per column (vertical count), cols = number of columns
+											var rows = loc.LockersPerColumn;
+											var cols = loc.LockerCount / rows;
+											@for (var col = 0; col < cols; col++)
 											{
-												var index1 = rowIndex;
+												var c = col;
 												<MudStack>
-													@for (var colIdx = 0; colIdx < columns; colIdx++)
+													@for (var row = 0; row < rows; row++)
 													{
-														var lockerIdx = index1 * columns + colIdx;
-														// Calculate gradient position based on row and column
-														double percent = ((index1 + colIdx) * 1.0) / (rows + columns - 2);
-													// Interpolate between two colors (blue and green)
-													// int r = (int)(0 + percent * (0 - 0));
-													// int g = (int)(123 + percent * (255 - 123));
-													// int b = (int)(255 + percent * (0 - 255));
+														var lockerIdx = c * rows + row;
+														// Calculate gradient position based on column and row
+														double percent = ((row + c) * 1.0) / (Math.Max(1, cols + rows - 2));
 														int r = (int)(90 + percent * (52 - 90));
 														int g = (int)(200 + percent * (199 - 200));
 														int b = (int)(250 + percent * (89 - 250));
@@ -339,8 +336,6 @@
 	public LocationService LocationService { get; set; }
 	[Inject]
 	public LockerService LockerService { get; set; }
-	[Inject]
-	public AppStateService AppStateService { get; set; }
 
 	// Existing variables
 	private List<Location> _locations = new List<Location>();
@@ -534,6 +529,10 @@
 		{
 			// Get existing lockers for this location
 			var existingLockers = await LockerService.GetLockersByLocationIdAsync(existingLoc.Location.ID);
+			// Ensure consistent ordering
+			existingLockers = existingLockers
+				.OrderBy(l => l.Number)
+				.ToList();
 			_existingLocationLockers.Add(existingLockers);
 
 			// Create new lockers list
@@ -595,6 +594,7 @@
 
 	private void SetupLockerLocationPreviewList()
 	{
+		_previewLocationLockers.Clear();
 		//Set the lockers per column for each location
 		for (var i = 0; i < _locations.Count; i++)
 		{
