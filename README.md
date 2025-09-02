@@ -64,11 +64,11 @@ Originally built to help a high school administrators manage locker assignments 
 ## 🧭 Roadmap
 
 - [x] Base admin panel
+- [x] CSV Import
+- [x] Report export (Excel/PDF)
 - [ ] Admin login (linked with SmartSchool API)
-- [ ] CSV Import
 - [ ] Locker reassignment
 - [ ] QR Code integration + scanning
-- [ ] Report export (Excel/PDF)
 - [ ] Interactive floor/locker map
 - [ ] Email reminders for returns
 - [ ] .Net Maui frontend for mobile/tablet use
