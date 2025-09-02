@@ -1,8 +1,8 @@
 @page "/import-reservations"
 @using EasyCsv.Components
 @using EasyCsv.Core
-@using System.Text.RegularExpressions
 @using MudBlazor.Utilities
+@using Lockit.Models.Services
 
 <MudStepper ShowResetButton OnPreviewInteraction="OnPreviewInteraction">
 	<ChildContent>
@@ -124,20 +124,20 @@
 					<HeaderContent>
 						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => x.Key.Name)">Name</MudTableSortLabel></MudTh>
 						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => x.Key.Class)">Class</MudTableSortLabel></MudTh>
-						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => ParseStudentYear(x.Key.Class))">Year</MudTableSortLabel></MudTh>
+						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => CsvProcessService.ParseStudentYear(x.Key.Class))">Year</MudTableSortLabel></MudTh>
 						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => x.Value.Number)">Locker #</MudTableSortLabel></MudTh>
 						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => _locationNameLookup.GetValueOrDefault(x.Value.LocationID, string.Empty))">Location</MudTableSortLabel></MudTh>
-						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => ParseStudentYear(x.Key.Class))">Priority</MudTableSortLabel></MudTh>
+						<MudTh><MudTableSortLabel SortBy="new Func<KeyValuePair<Student, Locker>, object>(x => CsvProcessService.ParseStudentYear(x.Key.Class))">Priority</MudTableSortLabel></MudTh>
 					</HeaderContent>
 					<RowTemplate>
 						<MudTd>@($"{context.Key.Name} {context.Key.LastName}")</MudTd>
 						<MudTd>@context.Key.Class</MudTd>
-						<MudTd>@(ParseStudentYear(context.Key.Class))</MudTd>
+						<MudTd>@(CsvProcessService.ParseStudentYear(context.Key.Class))</MudTd>
 						<MudTd>@context.Value.Number</MudTd>
 						<MudTd>@(_locationNameLookup.GetValueOrDefault(context.Value.LocationID, "Unknown"))</MudTd>
 						<MudTd>
-							<MudChip T="string" Size="Size.Small" Color="@GetYearPriorityColor(ParseStudentYear(context.Key.Class))">
-								@GetYearPriorityText(ParseStudentYear(context.Key.Class))
+							<MudChip T="string" Size="Size.Small" Color="@LockerAssignmentService.GetYearPriorityColor(CsvProcessService.ParseStudentYear(context.Key.Class))">
+								@LockerAssignmentService.GetYearPriorityText(CsvProcessService.ParseStudentYear(context.Key.Class))
 							</MudChip>
 						</MudTd>
 					</RowTemplate>
@@ -152,6 +152,21 @@
 				<MudDivider Class="my-6" />
 
 				<MudText Typo="Typo.h6" Class="mb-4">Locker Assignments by Location</MudText>
+				
+				@if (_swapMode)
+				{
+					<MudAlert Class="mb-4" Severity="Severity.Info" ShowCloseIcon="true" CloseIconClicked="CancelSwapMode">
+						<MudText><strong>Swap Mode Active</strong></MudText>
+						<MudText>Selected: <strong>@_firstSelectedLockerNumber</strong>. Click on another assigned locker to swap students.</MudText>
+					</MudAlert>
+				}
+				else
+				{
+					<MudAlert Class="mb-4" Severity="Severity.Normal">
+						<MudText><strong>Click on any assigned locker to start swapping students between lockers.</strong></MudText>
+					</MudAlert>
+				}
+
 				<MudGrid Class="pa-4" Justify="Justify.SpaceEvenly">
 					@foreach (var location in _locations)
 					{
@@ -189,18 +204,19 @@
 													@for (var colIndex = 0; colIndex < columns; colIndex++)
 													{
 														var lockerIndex = currentRowIndex * columns + colIndex;
-														var lockerNumber = GetLockerNumber(location, lockerIndex + 1);
+														var lockerNumber = LockerAssignmentService.GetLockerNumber(location, lockerIndex + 1);
 														var assignment = locationAssignments.FirstOrDefault(a => a.Value.Number == lockerNumber);
 														var isAssigned = assignment.Key != null;
-														var studentYear = isAssigned ? ParseStudentYear(assignment.Key.Class) : 0;
-														var priorityColor = isAssigned ? GetYearPriorityColor(studentYear) : Color.Surface;
-														var borderColor = isAssigned ? "border: 2px solid var(--mud-palette-" + priorityColor.ToString().ToLower() + ");" : "border: 1px solid var(--mud-palette-lines-default);";
-														var bgColor = isAssigned ? GetPriorityBackgroundColor(studentYear) : "var(--mud-palette-surface)";
+														var studentYear = isAssigned ? CsvProcessService.ParseStudentYear(assignment.Key.Class) : 0;
+														var priorityColor = isAssigned ? LockerAssignmentService.GetYearPriorityColor(studentYear) : Color.Surface;
+														var borderStyle = GetLockerBorderStyle(lockerNumber, isAssigned, priorityColor);
+														var bgColor = isAssigned ? LockerAssignmentService.GetPriorityBackgroundColor(studentYear) : "var(--mud-palette-surface)";
 														var textColor = isAssigned ? "var(--mud-palette-text-primary)" : "var(--mud-palette-text-secondary)";
+														var cursorStyle = GetLockerCursorStyle(isAssigned);
 														
 														<MudTooltip>
 															<ChildContent>
-																<MudPaper Outlined Class="pa-1 ma-0" Style="@($"background-color: {bgColor}; {borderColor} color: {textColor}; min-width: 45px; text-align: center; cursor: pointer;")">
+																<MudPaper @onclick="() => OnLockerClick(lockerNumber)" Outlined Class="pa-1 ma-0" Style="@($"background-color: {bgColor}; {borderStyle} color: {textColor}; min-width: 45px; text-align: center; {cursorStyle}")">
 																	<MudText Typo="Typo.caption">@lockerNumber</MudText>
 																	@if (isAssigned)
 																	{
@@ -211,14 +227,19 @@
 															<TooltipContent>
 																@if (isAssigned)
 																{
-																	<MudText Typo="Typo.body2"><strong>@lockerNumber</strong></MudText>
-																	<MudText Typo="Typo.body2">@assignment.Key.Name @assignment.Key.LastName</MudText>
-																	<MudText Typo="Typo.body2">Class: @assignment.Key.Class</MudText>
-																	<MudText Typo="Typo.body2">Year: @studentYear (@GetYearPriorityText(studentYear))</MudText>
+																	<MudText Typ="Typo.body2"><strong>@lockerNumber</strong></MudText>
+																	<MudText Typ="Typo.body2">@assignment.Key.Name @assignment.Key.LastName</MudText>
+																	<MudText Typ="Typo.body2">Class: @assignment.Key.Class</MudText>
+																	<MudText Typ="Typo.body2">Year: @studentYear (@LockerAssignmentService.GetYearPriorityText(studentYear))</MudText>
+																	@if (isAssigned)
+																	{
+																		<MudDivider Class="my-2" />
+																		<MudText Typ="Typo.caption" Color="Color.Info">Click to swap students</MudText>
+																	}
 																}
 																else
 																{
-																	<MudText Typo="Typo.body2">@lockerNumber - Available</MudText>
+																	<MudText Typ="Typo.body2">@lockerNumber - Available</MudText>
 																}
 															</TooltipContent>
 														</MudTooltip>
@@ -258,10 +279,10 @@
 	[Inject]
 	public LocationService LocationService { get; set; }
 	[Inject]
-	public LockerService LockerService { get; set; }
+	public LockerAssignmentService LockerAssignmentService { get; set; }
 	[Inject]
-	public StudentService StudentService { get; set; }
-	
+	public CsvProcessService CsvProcessService { get; set; }
+
 	private CsvTableHeaderMatcher _headerMatcher;
 	private IEasyCsv? _reservationsCsv;
 
@@ -269,7 +290,6 @@
 	private List<Location> _locations;
 	
 	// Performance optimization: Create lookup dictionaries
-	private Dictionary<int, Location> _locationLookup = new();
 	private Dictionary<int, string> _locationNameLookup = new();
 
 	// Assignment tracking
@@ -278,11 +298,15 @@
 	private bool _isCommitting = false;
 	private string _vacantLockerSort = "zzz";
 
+	// Locker swap functionality
+	private string? _firstSelectedLockerNumber;
+	private string? _secondSelectedLockerNumber;
+	private bool _swapMode = false;
+
 	protected override async Task OnInitializedAsync()
 	{
 		_locations = await LocationService.GetAllLocationsAsync();
 		// Create lookup dictionaries for O(1) performance
-		_locationLookup = _locations.ToDictionary(l => l.ID, l => l);
 		_locationNameLookup = _locations.ToDictionary(l => l.ID, l => l.Name);
 	}
 
@@ -303,49 +327,8 @@
 		if (_headerMatcher == null) return;
 		var allRecords = await _headerMatcher.GetRecords<Student>();
 
-		// Group to find duplicates and track them
-		var groupedRecords = allRecords
-			.GroupBy(s => new { 
-				Email = s.Email.ToLowerInvariant(),
-				Name = s.Name.ToLowerInvariant().Trim(),
-				LastName = s.LastName.ToLowerInvariant().Trim()
-			})
-			.ToList();
-
-		// Get unique records (first occurrence of each group)
-		_records = groupedRecords
-			.Select(g => g.First())
-			.ToList();
-
-		// Find duplicates (groups with more than one record)
-		var duplicateGroups = groupedRecords
-			.Where(g => g.Count() > 1)
-			.ToList();
-
-		// Show detailed information if duplicates were found
-		if (duplicateGroups.Any())
-		{
-			var totalDuplicates = duplicateGroups.Sum(g => g.Count() - 1); // Total removed duplicates
-		
-			// Build detailed message
-			var messageBuilder = new System.Text.StringBuilder();
-			messageBuilder.AppendLine($"Removed {totalDuplicates} duplicate student entries. Students were matched by email, name, and last name.");
-			messageBuilder.AppendLine();
-			messageBuilder.AppendLine("Duplicate students removed:");
-		
-			foreach (var group in duplicateGroups)
-			{
-				var firstStudent = group.First();
-				var duplicateCount = group.Count() - 1;
-				messageBuilder.Append($"• {firstStudent.Name} {firstStudent.LastName} ");
-				if (string.IsNullOrEmpty(firstStudent.Class) == false)
-				{
-					messageBuilder.AppendLine($"({firstStudent.Class})");
-				}
-			}
-
-			await DialogService.ShowMessageBox("Duplicates Removed", messageBuilder.ToString());
-		}
+		var result = await CsvProcessService.ProcessStudentRecords(allRecords);
+		_records = result.UniqueStudents;
 	}
 
 	private void ItemUpdated(MudItemDropInfo<PrefDropItem> dropItem)
@@ -370,6 +353,10 @@
 				// Reset all assignment data
 				_proposedAssignments = null;
 				_unassignedStudents = null;
+				// Reset swap mode state
+				_firstSelectedLockerNumber = null;
+				_secondSelectedLockerNumber = null;
+				_swapMode = false;
 				break;
 			case StepAction.Skip:
 				// occurs when clicking the skip button
@@ -419,13 +406,6 @@
 		new PrefDropItem(){ Year = 3 ,Index = 2},
 	};
 
-	public class PrefDropItem
-	{
-		public int Year { get; set; }
-		public int Index {get; set; }
-		public int LocationID { get; set; } = -1;
-	}
-
 	private void AddPref()
 	{
 		_prefrences.Add(new PrefDropItem());
@@ -446,145 +426,22 @@
 
 		try
 		{
-			// Initialize assignment tracking
-			_proposedAssignments = new Dictionary<Student, Locker>();
-			_unassignedStudents = new List<Student>();
+			// Reset swap mode when regenerating assignments
+			_firstSelectedLockerNumber = null;
+			_secondSelectedLockerNumber = null;
+			_swapMode = false;
 
-			// 1. Group students by year level and sort by priority (6th->1st years)
-			var studentsByYear = _records
-				.GroupBy(student => ParseStudentYear(student.Class))
-				.OrderByDescending(g => g.Key) // Higher years get priority
-				.ToDictionary(g => g.Key, g => g.ToList());
-
-			// 2. Get all available lockers and group by location
-			var allLockers = await LockerService.GetAllLockersAsync();
-			var availableLockersByLocation = allLockers
-				.Where(l => l.Status == Enums.LockerStatus.Available)
-				.GroupBy(l => l.LocationID)
-				.ToDictionary(g => g.Key, g => g.OrderBy(l => CalculateLockerPriority(l, _locations.First(loc => loc.ID == l.LocationID))).ToList());
-
-			// 3. Process each year group (in priority order)
-			foreach (var yearGroup in studentsByYear.OrderByDescending(kv => kv.Key))
+			var result = await LockerAssignmentService.AutoAssignLockersAsync(_records, _locations, _prefrences);
+			if (result.IsSuccess)
 			{
-				var year = yearGroup.Key;
-				var studentsInYear = yearGroup.Value;
-
-				// 4. Find preferences for this year group (ordered by priority)
-				var yearPreferences = _prefrences
-					.Where(p => p.Year == year)
-					.OrderBy(p => p.Index)
-					.ToList();
-
-				// 5. Try to assign entire year group to preferred locations
-				bool yearFullyAssigned = false;
-
-				foreach (var preference in yearPreferences)
-				{
-					if (availableLockersByLocation.ContainsKey(preference.LocationID) && 
-						availableLockersByLocation[preference.LocationID].Count >= studentsInYear.Count)
-					{
-						// We can fit the entire year group in this location
-						var lockersAtLocation = availableLockersByLocation[preference.LocationID].Take(studentsInYear.Count).ToList();
-						
-						for (int i = 0; i < studentsInYear.Count; i++)
-						{
-							var student = studentsInYear[i];
-							var locker = lockersAtLocation[i];
-							
-							// Track assignment (don't commit to database yet)
-							_proposedAssignments[student] = locker;
-							
-							// Remove from available list
-							availableLockersByLocation[preference.LocationID].Remove(locker);
-						}
-						
-						yearFullyAssigned = true;
-						break;
-					}
-				}
-
-				// 6. If we couldn't fit the entire year in preferred locations, try to group as many as possible
-				if (!yearFullyAssigned)
-				{
-					var remainingStudents = studentsInYear.ToList();
-
-					// First pass: Fill up preferred locations with as many students as possible
-					foreach (var preference in yearPreferences)
-					{
-						if (!remainingStudents.Any()) break;
-
-						if (availableLockersByLocation.ContainsKey(preference.LocationID) && 
-							availableLockersByLocation[preference.LocationID].Any())
-						{
-							var availableCount = availableLockersByLocation[preference.LocationID].Count;
-							var studentsToAssign = remainingStudents.Take(availableCount).ToList();
-
-							foreach (var student in studentsToAssign)
-							{
-								var locker = availableLockersByLocation[preference.LocationID].First();
-								
-								// Track assignment (don't commit to database yet)
-								_proposedAssignments[student] = locker;
-								
-								// Remove from available lists
-								availableLockersByLocation[preference.LocationID].Remove(locker);
-								remainingStudents.Remove(student);
-							}
-						}
-					}
-
-					// Second pass: Try to group remaining students in any available location with sufficient capacity
-					if (remainingStudents.Any())
-					{
-						// Find the location with the most available lockers that can fit the most remaining students
-						var bestLocation = availableLockersByLocation
-							.Where(kv => kv.Value.Any())
-							.OrderByDescending(kv => Math.Min(kv.Value.Count, remainingStudents.Count))
-							.FirstOrDefault();
-
-						if (bestLocation.Value != null && bestLocation.Value.Any())
-						{
-							var studentsToAssign = remainingStudents.Take(bestLocation.Value.Count).ToList();
-
-							foreach (var student in studentsToAssign)
-							{
-								var locker = availableLockersByLocation[bestLocation.Key].First();
-								
-								// Track assignment (don't commit to database yet)
-								_proposedAssignments[student] = locker;
-								
-								// Remove from available lists
-								availableLockersByLocation[bestLocation.Key].Remove(locker);
-								remainingStudents.Remove(student);
-							}
-						}
-
-						// Third pass: Assign any remaining students to any available locker
-						foreach (var student in remainingStudents)
-						{
-							var anyAvailableLocker = availableLockersByLocation.Values
-								.SelectMany(lockers => lockers)
-								.OrderBy(l => CalculateLockerPriority(l, _locations.First(loc => loc.ID == l.LocationID)))
-								.FirstOrDefault();
-
-							if (anyAvailableLocker != null)
-							{
-								// Track assignment (don't commit to database yet)
-								_proposedAssignments[student] = anyAvailableLocker;
-								
-								availableLockersByLocation[anyAvailableLocker.LocationID].Remove(anyAvailableLocker);
-							}
-							else
-							{
-								_unassignedStudents.Add(student);
-							}
-						}
-					}
-				}
+				_proposedAssignments = result.ProposedAssignments;
+				_unassignedStudents = result.UnassignedStudents;
+				StateHasChanged();
 			}
-
-			// Trigger UI update to show the assignments table
-			StateHasChanged();
+			else
+			{
+				await DialogService.ShowMessageBox("Error", $"An error occurred during assignment: {result.ErrorMessage}");
+			}
 		}
 		catch (Exception ex)
 		{
@@ -605,48 +462,9 @@
 
 		try
 		{
-			int successCount = 0;
-			int errorCount = 0;
-			var errors = new List<string>();
+			var result = await LockerAssignmentService.CommitAssignmentsAsync(_proposedAssignments);
 
-			// Add students in batch and get the results with IDs
-			var studentsToAdd = _proposedAssignments.Select(u => u.Key).Distinct().Where(u => u.ID == 0).ToList();
-			var addedStudents = await StudentService.AddStudentsBatchAsync(studentsToAdd);
-
-			// Update the student IDs in the original objects
-			foreach (var addedStudent in addedStudents)
-			{
-				var originalStudent = studentsToAdd.FirstOrDefault(s => 
-					s.Name == addedStudent.Name && 
-					s.LastName == addedStudent.LastName && 
-					s.Email == addedStudent.Email);
-				if (originalStudent != null)
-				{
-					originalStudent.ID = addedStudent.ID;
-				}
-			}
-
-			foreach (var assignment in _proposedAssignments)
-			{
-				try
-				{
-					var student = assignment.Key;
-					var locker = assignment.Value;
-
-					// Update locker with student assignment
-					locker.StudentID = student.ID;
-					locker.Status = Enums.LockerStatus.Occupied;
-					
-					await LockerService.UpdateLockerAsync(locker);
-					successCount++;
-				}
-				catch (Exception ex)
-				{
-					errorCount++;
-					errors.Add($"Failed to assign {assignment.Key.Name} {assignment.Key.LastName}: {ex.Message}");
-				}
-			}
-
+			//TODO: cleanup this summary
 			// Show completion summary
 			var locationBreakdown = string.Join("\n", 
 				_locations.Select(loc => {
@@ -655,8 +473,8 @@
 				}).Where(x => x != null));
 
 			var summaryMessage = $"Assignment completed!\n\n" +
-								$"Successfully assigned: {successCount}\n" +
-								$"Errors: {errorCount}\n" +
+								$"Successfully assigned: {result.SuccessCount}\n" +
+								$"Errors: {result.ErrorCount}\n" +
 								$"Students unassigned: {_unassignedStudents?.Count ?? 0}\n\n";
 
 			if (!string.IsNullOrEmpty(locationBreakdown))
@@ -664,22 +482,26 @@
 				summaryMessage += $"Breakdown by location:\n{locationBreakdown}";
 			}
 
-			if (errors.Any())
+			if (result.Errors.Any())
 			{
-				summaryMessage += $"\n\nErrors:\n{string.Join("\n", errors.Take(5))}";
-				if (errors.Count > 5)
+				summaryMessage += $"\n\nErrors:\n{string.Join("\n", result.Errors.Take(5))}";
+				if (result.Errors.Count > 5)
 				{
-					summaryMessage += $"\n... and {errors.Count - 5} more errors";
+					summaryMessage += $"\n... and {result.Errors.Count - 5} more errors";
 				}
 			}
 
 			await DialogService.ShowMessageBox("Assignment Complete", summaryMessage);
 
 			// Clear assignments after successful commit
-			if (errorCount == 0)
+			if (result.IsSuccess)
 			{
 				_proposedAssignments = null;
 				_unassignedStudents = null;
+				// Reset swap mode state
+				_firstSelectedLockerNumber = null;
+				_secondSelectedLockerNumber = null;
+				_swapMode = false;
 			}
 		}
 		catch (Exception ex)
@@ -693,128 +515,109 @@
 		}
 	}
 
-	private int ParseStudentYear(string studentClass)
+	private async Task OnLockerClick(string lockerNumber)
 	{
-		if (string.IsNullOrWhiteSpace(studentClass))
-			return 1;
+		if (_proposedAssignments == null) return;
 
-		// Try to extract numeric year from various formats like "1A", "2B", "3rd year", etc.
-		var match = Regex.Match(studentClass, @"(\d+)");
-			if (match.Success && int.TryParse(match.Groups[1].Value, out int year))
+		// Find the assignment for this locker
+		var assignment = _proposedAssignments.FirstOrDefault(a => a.Value.Number == lockerNumber);
+		var isAssigned = assignment.Key != null;
+
+		// Only allow clicking on assigned lockers
+		if (!isAssigned) return;
+
+		if (!_swapMode)
+		{
+			// Start swap mode
+			_firstSelectedLockerNumber = lockerNumber;
+			_swapMode = true;
+		}
+		else if (_firstSelectedLockerNumber == lockerNumber)
+		{
+			// Clicked the same locker - cancel swap mode
+			_firstSelectedLockerNumber = null;
+			_swapMode = false;
+		}
+		else
+		{
+			// Second locker selected - perform swap
+			_secondSelectedLockerNumber = lockerNumber;
+			await PerformLockerSwap();
+		}
+
+		StateHasChanged();
+	}
+
+	private async Task PerformLockerSwap()
+	{
+		if (_proposedAssignments == null || string.IsNullOrEmpty(_firstSelectedLockerNumber) || string.IsNullOrEmpty(_secondSelectedLockerNumber))
+			return;
+
+		try
+		{
+			// Find both assignments
+			var firstAssignment = _proposedAssignments.FirstOrDefault(a => a.Value.Number == _firstSelectedLockerNumber);
+			var secondAssignment = _proposedAssignments.FirstOrDefault(a => a.Value.Number == _secondSelectedLockerNumber);
+
+			if (firstAssignment.Key == null || secondAssignment.Key == null)
 			{
-			return Math.Max(1, Math.Min(6, year)); // Clamp between 1-6
+				await DialogService.ShowMessageBox("Error", "One or both selected lockers are not assigned.");
+				return;
+			}
+
+			// Get the students
+			var firstStudent = firstAssignment.Key;
+			var secondStudent = secondAssignment.Key;
+
+			// Get the lockers
+			var firstLocker = firstAssignment.Value;
+			var secondLocker = secondAssignment.Value;
+
+			// Remove the old assignments
+			_proposedAssignments.Remove(firstStudent);
+			_proposedAssignments.Remove(secondStudent);
+
+			// Add the swapped assignments
+			_proposedAssignments.Add(firstStudent, secondLocker);
+			_proposedAssignments.Add(secondStudent, firstLocker);
 		}
-
-		// Fallback: try to parse ordinal numbers
-		if (studentClass.Contains("1st", StringComparison.OrdinalIgnoreCase)) return 1;
-		if (studentClass.Contains("2nd", StringComparison.OrdinalIgnoreCase)) return 2;
-		if (studentClass.Contains("3rd", StringComparison.OrdinalIgnoreCase)) return 3;
-		if (studentClass.Contains("4th", StringComparison.OrdinalIgnoreCase)) return 4;
-		if (studentClass.Contains("5th", StringComparison.OrdinalIgnoreCase)) return 5;
-		if (studentClass.Contains("6th", StringComparison.OrdinalIgnoreCase)) return 6;
-
-		return 1; // Default to 1st year if unable to parse
-	}
-
-	private int CalculateLockerPriority(Locker locker, Location location)
-	{
-		// Parse locker number to get its index
-		var numberPart = locker.Number;
-		if (!string.IsNullOrEmpty(location.Prefix))
+		catch (Exception ex)
 		{
-			numberPart = locker.Number.Replace(location.Prefix, "");
+			await DialogService.ShowMessageBox("Error", $"An error occurred during swap: {ex.Message}");
 		}
-
-		if (int.TryParse(numberPart, out int lockerIndex))
+		finally
 		{
-			// Convert to 0-based index
-			lockerIndex = lockerIndex - 1;
-			
-			// Calculate position in grid
-			int row = lockerIndex / location.LockersPerColumn;
-			int col = lockerIndex % location.LockersPerColumn;
-			
-			// Priority calculation for horizontal distribution:
-			// Distribute across columns first, then rows
-			// Formula: col * totalRows + row
-			// This gives us horizontal distribution: 1, 4, 7 (first row), then 2, 5, 8 (second row), etc.
-			int totalRows = (int)Math.Ceiling((double)location.LockerCount / location.LockersPerColumn);
-			int priority = col * totalRows + row;
-			
-			return priority;
+			// Reset swap mode
+			_firstSelectedLockerNumber = null;
+			_secondSelectedLockerNumber = null;
+			_swapMode = false;
 		}
-
-		return int.MaxValue; // If unable to parse, put at end
 	}
 
-	private int CalculateLockerRowIndex(Locker locker, Location location)
+	private void CancelSwapMode()
 	{
-		// Parse locker number to get its index
-		var numberPart = locker.Number;
-		if (!string.IsNullOrEmpty(location.Prefix))
+		_firstSelectedLockerNumber = null;
+		_secondSelectedLockerNumber = null;
+		_swapMode = false;
+		StateHasChanged();
+	}
+
+	private string GetLockerBorderStyle(string lockerNumber, bool isAssigned, Color priorityColor)
+	{
+		var baseBorder = isAssigned ? "border: 2px solid var(--mud-palette-" + priorityColor.ToString().ToLower() + ");" : "border: 1px solid var(--mud-palette-lines-default);";
+		
+		// Add selection highlighting
+		if (_swapMode && _firstSelectedLockerNumber == lockerNumber)
 		{
-			numberPart = locker.Number.Replace(location.Prefix, "");
+			return "border: 3px solid var(--mud-palette-primary); box-shadow: 0 0 8px var(--mud-palette-primary);";
 		}
-
-		if (int.TryParse(numberPart, out int lockerIndex))
-		{
-			// Convert to 0-based index
-			lockerIndex = lockerIndex - 1;
-			
-			// Calculate row index: higher lockers have lower row indices (0 = top/highest)
-			int rowIndex = lockerIndex / location.LockersPerColumn;
-			return rowIndex;
-		}
-
-		return int.MaxValue; // If unable to parse, put at end
+		
+		return baseBorder;
 	}
 
-	private Color GetYearPriorityColor(int year)
+	private string GetLockerCursorStyle(bool isAssigned)
 	{
-		return year switch
-		{
-			6 => Color.Error,      // Highest priority - red
-			5 => Color.Warning,    // High priority - orange  
-			4 => Color.Info,       // Medium-high priority - blue
-			3 => Color.Primary,    // Medium priority - purple
-			2 => Color.Success,    // Lower priority - green
-			1 => Color.Secondary,  // Lowest priority - grey
-			_ => Color.Default
-		};
-	}
-
-	private string GetYearPriorityText(int year)
-	{
-		return year switch
-		{
-			6 => "6th Year (Highest)",
-			5 => "5th Year (High)",
-			4 => "4th Year (Med-High)",
-			3 => "3rd Year (Medium)",
-			2 => "2nd Year (Low)",
-			1 => "1st Year (Lowest)",
-			_ => $"{year}th Year"
-		};
-	}
-
-	private string GetLockerNumber(Location location, int index)
-	{
-		var prefix = string.IsNullOrEmpty(location.Prefix) ? "" : location.Prefix;
-		return $"{prefix}{index:D3}";
-	}
-
-	private string GetPriorityBackgroundColor(int year)
-	{
-		return year switch
-		{
-			6 => "rgba(244, 67, 54, 0.1)",    // Light red background
-			5 => "rgba(255, 152, 0, 0.1)",    // Light orange background
-			4 => "rgba(33, 150, 243, 0.1)",   // Light blue background
-			3 => "rgba(156, 39, 176, 0.1)",   // Light purple background
-			2 => "rgba(76, 175, 80, 0.1)",    // Light green background
-			1 => "rgba(158, 158, 158, 0.1)",  // Light grey background
-			_ => "var(--mud-palette-surface)"
-		};
+		return isAssigned ? "cursor: pointer;" : "cursor: default;";
 	}
 
 	private bool SearchFunc(KeyValuePair<Student, Locker> assignment)

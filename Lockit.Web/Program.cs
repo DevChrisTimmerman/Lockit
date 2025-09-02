@@ -14,6 +14,8 @@ namespace Lockit.Web
 			builder.Services.AddTransient<LockerService>();
 			builder.Services.AddTransient<LocationService>();
 			builder.Services.AddTransient<StudentService>();
+			builder.Services.AddTransient<LockerAssignmentService>();
+			builder.Services.AddTransient<CsvProcessService>();
 			builder.Services.AddSingleton<AppStateService>();
 			builder.Services.AddSingleton(new HttpClient { BaseAddress = new Uri("http://localhost:5031/") });
 			// Add services to the container.
@@ -27,6 +29,8 @@ namespace Lockit.Web
 			{
 				app.UseExceptionHandler("/Error");
 				// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+				//app.UseHttpsRedirection();
+
 				app.UseHsts();
 			}
 
