@@ -56,6 +56,11 @@ dotnet run --project Lockit.Server
 
 
 ## 📸 Screenshots (coming soon)
+<img width="1904" height="847" alt="Lockit-import" src="https://github.com/user-attachments/assets/2e005414-3317-4269-b99a-88efb8ae5f94" />
+<img width="1906" height="773" alt="Lockit-dashboard" src="https://github.com/user-attachments/assets/c24716c1-b2bc-46d2-bf6c-80266b32a319" />
+<img width="1896" height="846" alt="Lockit-StudentList" src="https://github.com/user-attachments/assets/99e7c9cd-9c93-404e-9dcf-eb7068b95463" />
+<img width="1885" height="928" alt="Lockit-LocationList" src="https://github.com/user-attachments/assets/776241f3-663c-4796-94c7-3e97310d2dd3" />
+
 
 ## 👩‍💼 Use Case
 
