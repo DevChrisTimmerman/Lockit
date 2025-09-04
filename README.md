@@ -7,6 +7,7 @@
 ## 🛠️ Tech Stack
 
 - **Frontend & Backend**: Blazor Server (.NET 9)
+- **WebAPI**: Asp .Net Core
 - **Database**: Entity Framework Core + SQL Server
 - **Language**: C#
 - **Hosting**: Local server or Azure App Service
