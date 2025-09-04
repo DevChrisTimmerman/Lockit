@@ -1,0 +1,265 @@
+﻿@page "/export"
+@using System.Text
+@using System.Text.RegularExpressions
+@using System.IO.Compression
+
+<MudText Typo="Typo.h4" Align="Align.Center" Class="ma-4">Export Locker Data</MudText>
+<div class="d-flex justify-center gap-3 ma-4" >
+	<MudButton EndIcon="@Icons.Material.Filled.Download" Color="Color.Success" Variant="Variant.Filled" OnClick="GenerateCsv">Export all</MudButton>
+</div>
+
+@if (_isExporting)
+{
+	<MudProgressLinear Indeterminate="true" Color="Color.Info" Class="ma-4" />
+	<MudText Align="Align.Center" Class="ma-4">Generating export files...</MudText>
+}
+
+@code {
+	[Inject]
+	public LockerService LockerService { get; set; }
+	[Inject]
+	public LocationService LocationService { get; set; }
+	[Inject]
+	public IJSRuntime JSRuntime { get; set; }
+	[Inject] 
+	public ISnackbar Snackbar { get; set; }
+
+	private bool _isExporting = false;
+
+	public enum ExportOption
+	{
+		All,
+		Selected
+	}
+
+	public async Task GenerateCsv()
+	{
+		_isExporting = true;
+		StateHasChanged();
+
+		try
+		{
+			// Get all locker data with students and locations
+			var lockers = await LockerService.GetAllLockersAsync();
+			var locations = await LocationService.GetAllLocationsAsync();
+
+			// Create a lookup dictionary for locations
+			var locationLookup = locations.ToDictionary(l => l.ID, l => l);
+
+			// Filter only occupied lockers (that have students)
+			var occupiedLockers = lockers.Where(l => l.Status == Enums.LockerStatus.Occupied && l.Student != null).ToList();
+
+			if (occupiedLockers.Any() == false)
+			{
+				Snackbar.Add("No occupied lockers found to export.", Severity.Warning);
+				return;
+			}
+
+			// Group by student class
+			var lockersByClass = occupiedLockers
+				.GroupBy(l => l.Student.Class)
+				.OrderBy(g => ParseStudentYear(g.Key))
+				.ThenBy(g => g.Key)
+				.ToList();
+
+			// Generate CSV content for each class
+			var csvFiles = new List<(string FileName, string Content)>();
+
+			foreach (var classGroup in lockersByClass)
+			{
+				var className = string.IsNullOrWhiteSpace(classGroup.Key) ? "Unknown_Class" : SanitizeFileName(classGroup.Key);
+				var fileName = $"Lockers_{className}.csv";
+				
+				var csvContent = GenerateClassCsv(classGroup.ToList(), locationLookup);
+				csvFiles.Add((fileName, csvContent));
+			}
+
+			// Create a summary CSV with all occupied data
+			var summaryContent = GenerateSummaryCsv(occupiedLockers, locationLookup);
+			csvFiles.Add(("All_Lockers_Summary.csv", summaryContent));
+
+			// Create a complete CSV with ALL locker data (all statuses)
+			var completeContent = GenerateCompleteCsv(lockers, locationLookup);
+			csvFiles.Add(("Complete_Locker_Inventory.csv", completeContent));
+
+			// Create ZIP file containing all CSV files
+			var zipBytes = CreateZipArchive(csvFiles);
+			var zipFileName = $"Locker_Export_{DateTime.Now:yyyy-MM-dd_HHmmss}.zip";
+			
+			// Download the ZIP file
+			await DownloadZipFile(zipFileName, zipBytes);
+
+			Snackbar.Add($"Successfully exported {csvFiles.Count} CSV files ({lockersByClass.Count} classes + summary + complete inventory) in ZIP archive", Severity.Success);
+		}
+		catch (Exception ex)
+		{
+			Snackbar.Add($"Error generating export: {ex.Message}", Severity.Error);
+		}
+		finally
+		{
+			_isExporting = false;
+			StateHasChanged();
+		}
+	}
+
+	private string GenerateClassCsv(List<Locker> lockers, Dictionary<int, Location> locationLookup)
+	{
+		var csv = new StringBuilder();
+		
+		// Add header
+		csv.AppendLine("Locker Number,Student Name,Student Last Name,Student Email,Class,Location,Status,SCUID");
+
+		// Add data rows
+		foreach (var locker in lockers.OrderBy(l => l.Number))
+		{
+			var location = locationLookup.GetValueOrDefault(locker.LocationID)?.Name ?? "Unknown";
+			var student = locker.Student;
+			
+			csv.AppendLine($"{EscapeCsvField(locker.Number)},{EscapeCsvField(student?.Name)},{EscapeCsvField(student?.LastName)},{EscapeCsvField(student?.Email)},{EscapeCsvField(student?.Class)},{EscapeCsvField(location)},{locker.Status},{EscapeCsvField(student?.SCUID)}");
+		}
+
+		return csv.ToString();
+	}
+
+	private string GenerateSummaryCsv(List<Locker> lockers, Dictionary<int, Location> locationLookup)
+	{
+		var csv = new StringBuilder();
+		
+		// Add header with additional summary fields
+		csv.AppendLine("Locker Number,Student Name,Student Last Name,Student Email,Class,Year,Location,Status,SCUID");
+
+		// Add data rows grouped by class for better organization
+		var sortedLockers = lockers
+			.OrderBy(l => ParseStudentYear(l.Student?.Class))
+			.ThenBy(l => l.Student?.Class)
+			.ThenBy(l => l.Number);
+
+		foreach (var locker in sortedLockers)
+		{
+			var location = locationLookup.GetValueOrDefault(locker.LocationID)?.Name ?? "Unknown";
+			var student = locker.Student;
+			var year = ParseStudentYear(student?.Class);
+			
+			csv.AppendLine($"{EscapeCsvField(locker.Number)},{EscapeCsvField(student?.Name)},{EscapeCsvField(student?.LastName)},{EscapeCsvField(student?.Email)},{EscapeCsvField(student?.Class)},{year},{EscapeCsvField(location)},{locker.Status},{EscapeCsvField(student?.SCUID)}");
+		}
+
+		return csv.ToString();
+	}
+
+	private string GenerateCompleteCsv(List<Locker> allLockers, Dictionary<int, Location> locationLookup)
+	{
+		var csv = new StringBuilder();
+		
+		// Add comprehensive header for all locker data
+		csv.AppendLine("Locker Number,Student Name,Student Last Name,Student Email,Class,Year,Location,Status,SCUID,Location Prefix,Location Description");
+
+		// Sort all lockers by location, then by locker number
+		var sortedLockers = allLockers
+			.OrderBy(l => locationLookup.GetValueOrDefault(l.LocationID)?.Name ?? "Unknown")
+			.ThenBy(l => l.Number);
+
+		foreach (var locker in sortedLockers)
+		{
+			var location = locationLookup.GetValueOrDefault(locker.LocationID);
+			var locationName = location?.Name ?? "Unknown";
+			var locationPrefix = location?.Prefix ?? "";
+			var locationDescription = location?.Description ?? "";
+			
+			var student = locker.Student;
+			var year = student != null ? ParseStudentYear(student.Class) : 0;
+			
+			// For non-occupied lockers, student fields will be empty
+			var studentName = student?.Name ?? "";
+			var studentLastName = student?.LastName ?? "";
+			var studentEmail = student?.Email ?? "";
+			var studentClass = student?.Class ?? "";
+			var studentScuid = student?.SCUID ?? "";
+			
+			csv.AppendLine($"{EscapeCsvField(locker.Number)},{EscapeCsvField(studentName)},{EscapeCsvField(studentLastName)},{EscapeCsvField(studentEmail)},{EscapeCsvField(studentClass)},{year},{EscapeCsvField(locationName)},{locker.Status},{EscapeCsvField(studentScuid)},{EscapeCsvField(locationPrefix)},{EscapeCsvField(locationDescription)}");
+		}
+
+		return csv.ToString();
+	}
+
+	private byte[] CreateZipArchive(List<(string FileName, string Content)> csvFiles)
+	{
+		using var memoryStream = new MemoryStream();
+		using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+		{
+			foreach (var (fileName, content) in csvFiles)
+			{
+				var entry = archive.CreateEntry(fileName);
+				using var entryStream = entry.Open();
+				using var writer = new StreamWriter(entryStream, Encoding.UTF8);
+				writer.Write(content);
+			}
+		}
+		
+		return memoryStream.ToArray();
+	}
+
+	private string EscapeCsvField(string field)
+	{
+		if (string.IsNullOrEmpty(field))
+			return "";
+
+		// If field contains comma, quotes, or newlines, wrap in quotes and escape internal quotes
+		if (field.Contains(",") || field.Contains("\"") || field.Contains("\n") || field.Contains("\r"))
+		{
+			return "\"" + field.Replace("\"", "\"\"") + "\"";
+		}
+
+		return field;
+	}
+
+	private string SanitizeFileName(string fileName)
+	{
+		// Remove invalid filename characters
+		var invalidChars = Path.GetInvalidFileNameChars();
+		var sanitized = new string(fileName.Where(c => !invalidChars.Contains(c)).ToArray());
+		
+		// Replace spaces with underscores and limit length
+		return sanitized.Replace(" ", "_").Substring(0, Math.Min(sanitized.Length, 50));
+	}
+
+	private int ParseStudentYear(string studentClass)
+	{
+		if (string.IsNullOrWhiteSpace(studentClass))
+			return 1;
+
+		// Try to extract numeric year from various formats like "1A", "2B", "3rd year", etc.
+		var match = Regex.Match(studentClass, @"(\d+)");
+		if (match.Success && int.TryParse(match.Groups[1].Value, out int year))
+		{
+			return Math.Max(1, Math.Min(6, year)); // Clamp between 1-6
+		}
+
+		// Fallback: try to parse ordinal numbers
+		if (studentClass.Contains("1st", StringComparison.OrdinalIgnoreCase)) return 1;
+		if (studentClass.Contains("2nd", StringComparison.OrdinalIgnoreCase)) return 2;
+		if (studentClass.Contains("3rd", StringComparison.OrdinalIgnoreCase)) return 3;
+		if (studentClass.Contains("4th", StringComparison.OrdinalIgnoreCase)) return 4;
+		if (studentClass.Contains("5th", StringComparison.OrdinalIgnoreCase)) return 5;
+		if (studentClass.Contains("6th", StringComparison.OrdinalIgnoreCase)) return 6;
+
+		return 1; // Default to 1st year if unable to parse
+	}
+
+	private async Task DownloadZipFile(string fileName, byte[] zipBytes)
+	{
+		var base64 = Convert.ToBase64String(zipBytes);
+		await JSRuntime.InvokeVoidAsync("downloadFile", fileName, base64, "application/zip");
+	}
+}
+
+<script>
+	window.downloadFile = function(filename, base64Data, contentType) {
+		const linkElement = document.createElement('a');
+		linkElement.setAttribute('href', `data:${contentType};base64,${base64Data}`);
+		linkElement.setAttribute('download', filename);
+		linkElement.style.display = 'none';
+		document.body.appendChild(linkElement);
+		linkElement.click();
+		document.body.removeChild(linkElement);
+	};
+</script>

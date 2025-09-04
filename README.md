@@ -7,6 +7,7 @@
 ## 🛠️ Tech Stack
 
 - **Frontend & Backend**: Blazor Server (.NET 9)
+- **WebAPI**: Asp .Net Core
 - **Database**: Entity Framework Core + SQL Server
 - **Language**: C#
 - **Hosting**: Local server or Azure App Service
@@ -55,7 +56,16 @@ dotnet run --project Lockit.Server
 ```
 
 
-## 📸 Screenshots (coming soon)
+## 📸 Screenshots
+
+Lockit Dashboard <br/>
+<img width="900" height="361" alt="Lockit-dashboard" src="https://github.com/user-attachments/assets/c24716c1-b2bc-46d2-bf6c-80266b32a319" />
+<br/><br/>CSV import with header detections<br/>
+<img width="900" height="423" alt="Lockit-import" src="https://github.com/user-attachments/assets/2e005414-3317-4269-b99a-88efb8ae5f94" />
+<br/><br/>Locker overview<br/>
+<img width="900" height="423" alt="Lockit-StudentList" src="https://github.com/user-attachments/assets/99e7c9cd-9c93-404e-9dcf-eb7068b95463" />
+<br/><br/>Location overview<br/>
+<img width="900" height="490" alt="Lockit-LocationList" src="https://github.com/user-attachments/assets/776241f3-663c-4796-94c7-3e97310d2dd3" />
 
 ## 👩‍💼 Use Case
 
@@ -64,11 +74,11 @@ Originally built to help a high school administrators manage locker assignments 
 ## 🧭 Roadmap
 
 - [x] Base admin panel
+- [x] CSV Import
+- [x] Report export (Excel/PDF)
 - [ ] Admin login (linked with SmartSchool API)
-- [ ] CSV Import
 - [ ] Locker reassignment
 - [ ] QR Code integration + scanning
-- [ ] Report export (Excel/PDF)
 - [ ] Interactive floor/locker map
 - [ ] Email reminders for returns
 - [ ] .Net Maui frontend for mobile/tablet use
