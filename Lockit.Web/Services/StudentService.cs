@@ -64,4 +64,18 @@ public class StudentService
 				throw new Exception($"An error occurred while adding students. Status: {response.StatusCode}, Content: {errorContent}");
 		}
 	}
+
+	public async Task DeleteAllStudentsAsync()
+	{
+		var response = await _httpClient.DeleteAsync("api/students");
+		switch (response.StatusCode)
+		{
+			case HttpStatusCode.NoContent:
+				break;
+			default:
+				var errorContent = await response.Content.ReadAsStringAsync();
+				throw new Exception($"An error occurred while deleting all students. Status: {response.StatusCode}, Content: {errorContent}");
+		}
+	}
+
 }

@@ -10,4 +10,5 @@ public interface IStudentRepository
 	Task<IEnumerable<Student>?> AddStudentBatchAsync(IEnumerable<Student> students);
 	//Task<Student?> UpdateStudentAsync(int studentId, Student student);
 	//Task<bool> DeleteStudentAsync(int studentId);
+	Task DeleteAllStudentsAsync();
 }

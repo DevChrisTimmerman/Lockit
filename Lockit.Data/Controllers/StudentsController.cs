@@ -54,4 +54,12 @@ public class StudentsController : Controller
 		var addedStudents = await _studentRepository.AddStudentBatchAsync(students);
 		return CreatedAtAction(nameof(GetAllStudents), addedStudents);
 	}
+
+	[HttpDelete]
+	public async Task<IActionResult> DeleteAllStudents()
+	{
+		await _studentRepository.DeleteAllStudentsAsync();
+		return NoContent();
+	}
+
 }

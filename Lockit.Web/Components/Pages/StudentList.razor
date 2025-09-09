@@ -44,12 +44,21 @@
 	</LoadingContent>
 </MudTable>
 
+<MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" Class="mt-4" OnClick="DeleteAllStudents">
+	Delete all students
+</MudButton>
+
 
 @code {
 	[Inject]
 	public StudentService StudentService { get; set; }
 	[Inject]
 	public LockerService LockerService { get; set; }
+	[Inject]
+	public IDialogService DialogService { get; set; }
+	[Inject]
+	public ISnackbar Snackbar { get; set; }
+
 	private List<Student> _students = new List<Student>();
 	private List<Locker> _lockers = new List<Locker>();
 	private bool _dataLoaded = false;
@@ -77,4 +86,18 @@
 		return _lockers.FirstOrDefault(l => l.StudentID == studentID) != null;
 	}
 
+	private async Task DeleteAllStudents()
+	{
+		bool? result = await DialogService.ShowMessageBox(
+			"Confirm Delete",
+			"Are you sure you want to delete all students? This action cannot be undone.",
+			yesText: "Delete All", cancelText: "Cancel");
+		if (result == true)
+		{
+			await StudentService.DeleteAllStudentsAsync();
+			_students.Clear();
+			StateHasChanged();
+			Snackbar.Add("All students have been deleted.", Severity.Success);
+		}
+	}
 }

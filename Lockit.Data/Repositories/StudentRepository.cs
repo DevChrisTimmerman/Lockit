@@ -36,4 +36,22 @@ public class StudentRepository : IStudentRepository
 		await _context.SaveChangesAsync();
 		return students;
 	}
+
+	public async Task DeleteAllStudentsAsync()
+	{
+		// Unassign lockers (set StudentID to null) before deleting students.
+		var lockersToUpdate = await _context.Lockers.Where(l => l.StudentID != null).ToListAsync();
+		foreach (var locker in lockersToUpdate)
+		{
+			locker.StudentID = null;
+			locker.Status = Enums.LockerStatus.Available;
+		}
+		
+		// Save the locker updates first
+		await _context.SaveChangesAsync();
+
+		// Now safe to delete students
+		_context.Students.RemoveRange(_context.Students);
+		await _context.SaveChangesAsync();
+	}
 }
