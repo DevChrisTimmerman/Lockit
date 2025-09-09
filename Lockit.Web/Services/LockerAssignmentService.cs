@@ -3,7 +3,7 @@ using Lockit.Models.Services;
 using MudBlazor;
 
 namespace Lockit.Web.Services;
-
+//TODO: Review this class for optimization and edge cases handling
 public class LockerAssignmentService
 {
 	private readonly LockerService _lockerService;
@@ -26,7 +26,8 @@ public class LockerAssignmentService
 	public async Task<LockerAssignmentResult> AutoAssignLockersAsync(
 		List<Student> students, 
 		List<Location> locations, 
-		List<PrefDropItem> preferences)
+		List<PrefDropItem> preferences,
+		bool sequentialIsEqual = false)
 	{
 		if (students == null || !students.Any())
 		{
@@ -48,7 +49,11 @@ public class LockerAssignmentService
 			var availableLockersByLocation = allLockers
 				.Where(l => l.Status == Enums.LockerStatus.Available)
 				.GroupBy(l => l.LocationID)
-				.ToDictionary(g => g.Key, g => g.OrderBy(l => CalculateLockerPriority(l, locations.First(loc => loc.ID == l.LocationID))).ToList());
+				.ToDictionary(
+					g => g.Key,
+					g => g
+						.OrderBy(l => CalculateLockerPriority(l, locations.First(loc => loc.ID == l.LocationID)))
+						.ToList());
 
 			// 3. Process each year group (in priority order)
 			foreach (var yearGroup in studentsByYear.OrderByDescending(kv => kv.Key))
@@ -65,105 +70,267 @@ public class LockerAssignmentService
 				// 5. Try to assign entire year group to preferred locations
 				bool yearFullyAssigned = false;
 
-				foreach (var preference in yearPreferences)
+				if (sequentialIsEqual)
 				{
-					if (availableLockersByLocation.ContainsKey(preference.LocationID) && 
-						availableLockersByLocation[preference.LocationID].Count >= studentsInYear.Count)
-					{
-						// We can fit the entire year group in this location
-						var lockersAtLocation = availableLockersByLocation[preference.LocationID].Take(studentsInYear.Count).ToList();
-						
-						for (int i = 0; i < studentsInYear.Count; i++)
-						{
-							var student = studentsInYear[i];
-							var locker = lockersAtLocation[i];
-							
-							// Track assignment (don't commit to database yet)
-							result.ProposedAssignments[student] = locker;
-							
-							// Remove from available list
-							availableLockersByLocation[preference.LocationID].Remove(locker);
-						}
-						
-						yearFullyAssigned = true;
-						break;
-					}
-				}
-
-				// 6. If we couldn't fit the entire year in preferred locations, try to group as many as possible
-				if (!yearFullyAssigned)
-				{
+					// Equalize across contiguous same-year preferences in the global list
+					var orderedAll = preferences.OrderBy(p => p.Index).ToList();
 					var remainingStudents = studentsInYear.ToList();
 
-					// First pass: Fill up preferred locations with as many students as possible
-					foreach (var preference in yearPreferences)
+					int i = 0;
+					while (i < orderedAll.Count && remainingStudents.Any())
 					{
-						if (!remainingStudents.Any()) break;
-
-						if (availableLockersByLocation.ContainsKey(preference.LocationID) && 
-							availableLockersByLocation[preference.LocationID].Any())
+						var current = orderedAll[i];
+						if (current.Year != year)
 						{
-							var availableCount = availableLockersByLocation[preference.LocationID].Count;
-							var studentsToAssign = remainingStudents.Take(availableCount).ToList();
+							i++;
+							continue;
+						}
 
-							foreach (var student in studentsToAssign)
+						// Build contiguous run for this year
+						var run = new List<PrefDropItem>();
+						int j = i;
+						while (j < orderedAll.Count && orderedAll[j].Year == year)
+						{
+							run.Add(orderedAll[j]);
+							j++;
+						}
+
+						// Prepare unique location list in run order
+						var runLocationIds = run
+							.Select(r => r.LocationID)
+							.Distinct()
+							.Where(id => availableLockersByLocation.ContainsKey(id))
+							.ToList();
+
+						if (runLocationIds.Count == 0)
+						{
+							i = j;
+							continue;
+						}
+
+						// Count available lockers across the run
+						int availableAcrossRun = runLocationIds.Sum(id => availableLockersByLocation.GetValueOrDefault(id)?.Count ?? 0);
+
+						// Assign in a round-robin manner to equalize across the run locations
+						int locIndex = 0;
+						while (remainingStudents.Any() && availableAcrossRun > 0)
+						{
+							var student = remainingStudents[0];
+
+							// Find next location with availability
+							int attempts = 0;
+							Locker? locker = null;
+							int chosenLocId = -1;
+							while (attempts < runLocationIds.Count)
 							{
-								var locker = availableLockersByLocation[preference.LocationID].First();
-								
-								// Track assignment (don't commit to database yet)
+								var locId = runLocationIds[locIndex];
+								var list = availableLockersByLocation.GetValueOrDefault(locId);
+								if (list != null && list.Count > 0)
+								{
+									locker = list[0];
+									chosenLocId = locId;
+									break;
+								}
+								locIndex = (locIndex + 1) % runLocationIds.Count;
+								attempts++;
+							}
+
+							if (locker == null)
+							{
+								// No lockers left in this run
+								break;
+							}
+
+							// Track assignment (don't commit to database yet)
+							result.ProposedAssignments[student] = locker;
+							remainingStudents.RemoveAt(0);
+
+							// Remove from available lists
+							availableLockersByLocation[chosenLocId].RemoveAt(0);
+							availableAcrossRun--;
+
+							// Move to next location for round-robin
+							locIndex = (locIndex + 1) % runLocationIds.Count;
+						}
+
+						if (!remainingStudents.Any())
+						{
+							yearFullyAssigned = true;
+							break;
+						}
+
+						i = j; // continue after this run
+					}
+
+					// If still students remain for this year, respect pref index first, then fallback
+					if (!yearFullyAssigned)
+					{
+						var remainingUnassignedStudents = studentsInYear.Where(s => !result.ProposedAssignments.ContainsKey(s)).ToList();
+
+						// Prefer remaining preferred locations in pref index order
+						foreach (var pref in yearPreferences)
+						{
+							if (!remainingUnassignedStudents.Any()) break;
+							if (!availableLockersByLocation.TryGetValue(pref.LocationID, out var list) || list.Count == 0) continue;
+
+							var assignCount = Math.Min(list.Count, remainingUnassignedStudents.Count);
+							for (int k = 0; k < assignCount; k++)
+							{
+								var student = remainingUnassignedStudents[0];
+								var locker = list[0];
 								result.ProposedAssignments[student] = locker;
-								
-								// Remove from available lists
-								availableLockersByLocation[preference.LocationID].Remove(locker);
-								remainingStudents.Remove(student);
+								remainingUnassignedStudents.RemoveAt(0);
+								list.RemoveAt(0);
+							}
+						}
+
+						// Try grouping remaining students in any available location with sufficient capacity
+						if (remainingUnassignedStudents.Any())
+						{
+							var bestLocation = availableLockersByLocation
+								.Where(kv => kv.Value.Any())
+								.OrderByDescending(kv => Math.Min(kv.Value.Count, remainingUnassignedStudents.Count))
+								.FirstOrDefault();
+
+							if (bestLocation.Value != null && bestLocation.Value.Any())
+							{
+								var studentsToAssign = remainingUnassignedStudents.Take(bestLocation.Value.Count).ToList();
+
+								foreach (var student in studentsToAssign)
+								{
+									var locker = availableLockersByLocation[bestLocation.Key].First();
+									// Track assignment (don't commit to database yet)
+									result.ProposedAssignments[student] = locker;
+									// Remove from available lists
+									availableLockersByLocation[bestLocation.Key].Remove(locker);
+									remainingUnassignedStudents.Remove(student);
+								}
+							}
+
+							// Assign any remaining students to any available locker
+							foreach (var student in remainingUnassignedStudents)
+							{
+								var anyAvailableLocker = availableLockersByLocation.Values
+									.SelectMany(lockers => lockers)
+									.OrderBy(l => CalculateLockerPriority(l, locations.First(loc => loc.ID == l.LocationID)))
+									.FirstOrDefault();
+
+								if (anyAvailableLocker != null)
+								{
+									// Track assignment (don't commit to database yet)
+									result.ProposedAssignments[student] = anyAvailableLocker;
+									availableLockersByLocation[anyAvailableLocker.LocationID].Remove(anyAvailableLocker);
+								}
+								else
+								{
+									result.UnassignedStudents.Add(student);
+								}
 							}
 						}
 					}
-
-					// Second pass: Try to group remaining students in any available location with sufficient capacity
-					if (remainingStudents.Any())
+				}
+				else
+				{
+					foreach (var preference in yearPreferences)
 					{
-						// Find the location with the most available lockers that can fit the most remaining students
-						var bestLocation = availableLockersByLocation
-							.Where(kv => kv.Value.Any())
-							.OrderByDescending(kv => Math.Min(kv.Value.Count, remainingStudents.Count))
-							.FirstOrDefault();
-
-						if (bestLocation.Value != null && bestLocation.Value.Any())
+						if (availableLockersByLocation.ContainsKey(preference.LocationID) && 
+							availableLockersByLocation[preference.LocationID].Count >= studentsInYear.Count)
 						{
-							var studentsToAssign = remainingStudents.Take(bestLocation.Value.Count).ToList();
-
-							foreach (var student in studentsToAssign)
+							// We can fit the entire year group in this location
+							var lockersAtLocation = availableLockersByLocation[preference.LocationID].Take(studentsInYear.Count).ToList();
+							
+							for (int i2 = 0; i2 < studentsInYear.Count; i2++)
 							{
-								var locker = availableLockersByLocation[bestLocation.Key].First();
+								var student = studentsInYear[i2];
+								var locker = lockersAtLocation[i2];
 								
 								// Track assignment (don't commit to database yet)
 								result.ProposedAssignments[student] = locker;
 								
-								// Remove from available lists
-								availableLockersByLocation[bestLocation.Key].Remove(locker);
-								remainingStudents.Remove(student);
+								// Remove from available list
+								availableLockersByLocation[preference.LocationID].Remove(locker);
+							}
+							
+							yearFullyAssigned = true;
+							break;
+						}
+					}
+
+					// 6. If we couldn't fit the entire year in preferred locations, try to group as many as possible
+					if (!yearFullyAssigned)
+					{
+						var remainingStudents = studentsInYear.ToList();
+
+						// First pass: Fill up preferred locations with as many students as possible
+						foreach (var preference in yearPreferences)
+						{
+							if (!remainingStudents.Any()) break;
+
+							if (availableLockersByLocation.ContainsKey(preference.LocationID) && 
+								availableLockersByLocation[preference.LocationID].Any())
+							{
+								var availableCount = availableLockersByLocation[preference.LocationID].Count;
+								var studentsToAssign = remainingStudents.Take(availableCount).ToList();
+
+								foreach (var student in studentsToAssign)
+								{
+									var locker = availableLockersByLocation[preference.LocationID].First();
+									
+									// Track assignment (don't commit to database yet)
+									result.ProposedAssignments[student] = locker;
+									
+									// Remove from available lists
+									availableLockersByLocation[preference.LocationID].Remove(locker);
+									remainingStudents.Remove(student);
+								}
 							}
 						}
 
-						// Third pass: Assign any remaining students to any available locker
-						foreach (var student in remainingStudents)
+						// Second pass: Try to group remaining students in any available location with sufficient capacity
+						if (remainingStudents.Any())
 						{
-							var anyAvailableLocker = availableLockersByLocation.Values
-								.SelectMany(lockers => lockers)
-								.OrderBy(l => CalculateLockerPriority(l, locations.First(loc => loc.ID == l.LocationID)))
+							// Find the location with the most available lockers that can fit the most remaining students
+							var bestLocation = availableLockersByLocation
+								.Where(kv => kv.Value.Any())
+								.OrderByDescending(kv => Math.Min(kv.Value.Count, remainingStudents.Count))
 								.FirstOrDefault();
 
-							if (anyAvailableLocker != null)
+							if (bestLocation.Value != null && bestLocation.Value.Any())
 							{
-								// Track assignment (don't commit to database yet)
-								result.ProposedAssignments[student] = anyAvailableLocker;
-								
-								availableLockersByLocation[anyAvailableLocker.LocationID].Remove(anyAvailableLocker);
+								var studentsToAssign = remainingStudents.Take(bestLocation.Value.Count).ToList();
+
+								foreach (var student in studentsToAssign)
+								{
+									var locker = availableLockersByLocation[bestLocation.Key].First();
+									
+									// Track assignment (don't commit to database yet)
+									result.ProposedAssignments[student] = locker;
+									
+									// Remove from available lists
+									availableLockersByLocation[bestLocation.Key].Remove(locker);
+									remainingStudents.Remove(student);
+								}
 							}
-							else
+
+							// Third pass: Assign any remaining students to any available locker
+							foreach (var student in remainingStudents)
 							{
-								result.UnassignedStudents.Add(student);
+								var anyAvailableLocker = availableLockersByLocation.Values
+									.SelectMany(lockers => lockers)
+									.OrderBy(l => CalculateLockerPriority(l, locations.First(loc => loc.ID == l.LocationID)))
+									.FirstOrDefault();
+
+								if (anyAvailableLocker != null)
+								{
+									// Track assignment (don't commit to database yet)
+									result.ProposedAssignments[student] = anyAvailableLocker;
+									
+									availableLockersByLocation[anyAvailableLocker.LocationID].Remove(anyAvailableLocker);
+								}
+								else
+								{
+									result.UnassignedStudents.Add(student);
+								}
 							}
 						}
 					}

@@ -82,12 +82,18 @@
 
 				</ItemRenderer>
 			</MudDropContainer>
-			<MudGrid Justify="Justify.FlexEnd">
+			<MudStack Row AlignItems="AlignItems.Center" Justify="Justify.FlexEnd">
+				<MudItem>
+					<MudSwitch @bind-Value="@_sequentialIsEqual" Color="Color.Primary" Label="Treat sequential same year prefs as equal" />
+				</MudItem>
+				<MudItem>
+				<MudDivider Vertical DividerType="DividerType.Middle"/>
+				</MudItem>
 				<MudItem>
 					<MudIconButton Icon="@Icons.Material.Filled.AddCircle" OnClick="AddPref" Color="Color.Success"/>
 					<MudIconButton Disabled="_locations.Count <= 0" Icon="@Icons.Material.Filled.Cancel" OnClick="RemovePref" Color="Color.Secondary"/>
 				</MudItem>
-			</MudGrid>
+			</MudStack>
 		</MudStep>
 		<MudStep Title="Review assignments">
 			@if (_proposedAssignments?.Any() != true)
@@ -288,7 +294,8 @@
 
 	private List<Student>? _records;
 	private List<Location> _locations;
-	
+	private bool _sequentialIsEqual;
+
 	// Performance optimization: Create lookup dictionaries
 	private Dictionary<int, string> _locationNameLookup = new();
 
@@ -431,7 +438,7 @@
 			_secondSelectedLockerNumber = null;
 			_swapMode = false;
 
-			var result = await LockerAssignmentService.AutoAssignLockersAsync(_records, _locations, _prefrences);
+			var result = await LockerAssignmentService.AutoAssignLockersAsync(_records, _locations, _prefrences, _sequentialIsEqual);
 			if (result.IsSuccess)
 			{
 				_proposedAssignments = result.ProposedAssignments;
